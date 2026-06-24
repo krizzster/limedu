@@ -1,0 +1,33 @@
+{
+  "groupName": "The 6B Survivors",
+  "members": {
+    "neyansh": {
+      "name": "Neyansh Naksh",
+      "password": "123456",
+      "currentClass": "7D",
+      "status": "",
+      "pdfs": []
+    },
+    "viraj": {
+      "name": "Viraj Ashwin",
+      "password": "123456",
+      "currentClass": "",
+      "status": "",
+      "pdfs": []
+    },
+    "mohit": {
+      "name": "Galla Mohit Sai",
+      "password": "123456",
+      "currentClass": "",
+      "status": "",
+      "pdfs": []
+    },
+    "pratyank": {
+      "name": "Pratyank Tirkey",
+      "password": "123456",
+      "currentClass": "",
+      "status": "",
+      "pdfs": []
+    }
+  }
+}

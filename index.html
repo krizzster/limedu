@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6B Survivors Hub</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-container" class="card">
+        <h2>🔒 Friend Hub Login</h2>
+        <p>Enter your details to enter the workspace</p>
+        <div class="input-group">
+            <input type="text" id="username" placeholder="Your Name (e.g. Kriz)" required>
+        </div>
+        <div class="input-group">
+            <input type="password" id="password" placeholder="Password" required>
+        </div>
+        <button id="login-btn" onclick="handleLogin()">Login</button>
+        <p id="login-error" class="error-msg"></p>
+    </div>
+
+    <!-- MAIN DASHBOARD (Hidden by default) -->
+    <div id="dashboard-container" class="hidden">
+        <header>
+            <h1 id="hub-title">The 6B Survivors Hub</h1>
+            <p class="subtitle">Connected across 7th Grade 🎓</p>
+            <button class="logout-btn" onclick="handleLogout()">Log Out</button>
+        </header>
+
+        <!-- Dynamic Grid where Friend Cards will appear -->
+        <main id="friends-grid" class="grid">
+            <!-- JavaScript will insert cards here -->
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
