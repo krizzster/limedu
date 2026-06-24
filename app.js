@@ -1,6 +1,6 @@
 let globalData = {};
+const LOADING_TIME = 2500; // 2.5 seconds fake load duration
 
-// Load data when the website loads
 window.addEventListener('DOMContentLoaded', () => {
     fetch('data.json')
         .then(response => response.json())
@@ -8,6 +8,12 @@ window.addEventListener('DOMContentLoaded', () => {
             globalData = data;
             if (data.groupName) {
                 document.getElementById('hub-title').innerText = data.groupName;
+            }
+            
+            // Check if user session already exists in browser storage
+            const savedSession = localStorage.getItem('hubUserSession');
+            if (savedSession === 'authenticated') {
+                runFakeLoadingScreen();
             }
         })
         .catch(err => console.error("Error loading data.json:", err));
@@ -20,7 +26,6 @@ function handleLogin() {
 
     let authenticated = false;
 
-    // Search inside the members object for a match
     for (let key in globalData.members) {
         let member = globalData.members[key];
         if (member.name.toLowerCase() === userInp.toLowerCase() && member.password === passInp) {
@@ -30,27 +35,39 @@ function handleLogin() {
     }
 
     if (authenticated) {
-        // Hide login and show dashboard layout
-        document.getElementById('login-container').classList.add('hidden');
-        document.body.style.alignItems = "flex-start"; // readjust alignment
-        document.getElementById('dashboard-container').classList.remove('hidden');
-        
-        buildDashboard();
+        // Save auth data to localStorage so refresh doesn't wipe it
+        localStorage.setItem('hubUserSession', 'authenticated');
+        runFakeLoadingScreen();
     } else {
         errorEl.innerText = "❌ Invalid name or password. Try again!";
     }
 }
 
+function runFakeLoadingScreen() {
+    // Hide both main containers and display loader
+    document.getElementById('login-container').classList.add('hidden');
+    document.getElementById('dashboard-container').classList.add('hidden');
+    document.getElementById('loader-container').classList.remove('hidden');
+    document.body.style.alignItems = "center";
+
+    // Wait 2.5 seconds before showing the dashboard layout
+    setTimeout(() => {
+        document.getElementById('loader-container').classList.add('hidden');
+        document.body.style.alignItems = "flex-start";
+        document.getElementById('dashboard-container').classList.remove('hidden');
+        buildDashboard();
+    }, LOADING_TIME);
+}
+
 function buildDashboard() {
     const grid = document.getElementById('friends-grid');
-    grid.innerHTML = ''; // Clear out any placeholder text
+    grid.innerHTML = ''; 
 
     for (let key in globalData.members) {
         let friend = globalData.members[key];
 
-        // Generate PDF items HTML string
         let pdfItemsHTML = '';
-        if (friend.pdfs.length === 0) {
+        if (!friend.pdfs || friend.pdfs.length === 0) {
             pdfItemsHTML = '<p style="margin:0; font-size:0.85rem;">No PDFs uploaded yet.</p>';
         } else {
             friend.pdfs.forEach(pdf => {
@@ -65,9 +82,8 @@ function buildDashboard() {
             });
         }
 
-        // Create the individual grid card
         const card = document.createElement('div');
-        card.className = 'friend-card';
+        card.className = 'friend-card fade-in';
         card.innerHTML = `
             <div class="friend-header">
                 <span class="friend-name">${friend.name}</span>
@@ -75,7 +91,7 @@ function buildDashboard() {
             </div>
             <p class="friend-status">"${friend.status}"</p>
             <ul class="pdf-list">
-                <strong style="font-size:0.8rem; display:block; margin-bottom:0.5rem; color:var(--text-muted)">RECENT UPLOADS:</strong>
+                <strong style="font-size:0.8rem; display:block; margin-bottom:0.6rem; color:var(--text-muted)">RECENT UPLOADS:</strong>
                 ${pdfItemsHTML}
             </ul>
         `;
@@ -84,5 +100,7 @@ function buildDashboard() {
 }
 
 function handleLogout() {
-    window.location.reload(); // Simple reload reset to bring back login screen
+    // Clear login storage status and refresh
+    localStorage.removeItem('hubUserSession');
+    window.location.reload();
 }

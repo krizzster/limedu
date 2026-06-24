@@ -8,10 +8,16 @@
 </head>
 <body>
 
+    <!-- LOADING SCREEN -->
+    <div id="loader-container" class="hidden">
+        <div class="spinner"></div>
+        <p class="loading-text">Synchronizing Hub Data...</p>
+    </div>
+
     <!-- LOGIN SCREEN -->
-    <div id="login-container" class="card">
-        <h2>🔒 Friend Hub Login</h2>
-        <p>Enter your details to enter the workspace</p>
+    <div id="login-container" class="card fade-in">
+        <h2>🎒 Friend Hub Login</h2>
+        <p>Connect with your 6B crew</p>
         <div class="input-group">
             <input type="text" id="username" placeholder="Your Name (e.g. Kriz)" required>
         </div>
@@ -22,17 +28,23 @@
         <p id="login-error" class="error-msg"></p>
     </div>
 
-    <!-- MAIN DASHBOARD (Hidden by default) -->
-    <div id="dashboard-container" class="hidden">
+    <!-- MAIN DASHBOARD -->
+    <div id="dashboard-container" class="hidden fade-in">
         <header>
-            <h1 id="hub-title">The 6B Survivors Hub</h1>
-            <p class="subtitle">Connected across 7th Grade 🎓</p>
-            <button class="logout-btn" onclick="handleLogout()">Log Out</button>
+            <div>
+                <h1 id="hub-title">The 6B Survivors Hub</h1>
+                <p class="subtitle">Connected across 7th Grade 🎓</p>
+            </div>
+            
+            <!-- TEMPORARY PLACEHOLDER PROFILE PIC -->
+            <div class="profile-area" onclick="handleLogout()" title="Click to Log Out">
+                <div class="avatar-placeholder">6B</div>
+            </div>
         </header>
 
-        <!-- Dynamic Grid where Friend Cards will appear -->
+        <!-- Dynamic Grid -->
         <main id="friends-grid" class="grid">
-            <!-- JavaScript will insert cards here -->
+            <!-- JavaScript inserts cards here -->
         </main>
     </div>
 
