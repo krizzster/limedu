@@ -1,13 +1,30 @@
 :root {
+    /* Light Mode Variables */
     --bg-color: #f8f9fa;
     --card-bg: #ffffff;
     --border-color: #e9ecef;
     --text-main: #212529;
     --text-muted: #6c757d;
-    --accent: #e63946;       /* Crimson Red Accent */
-    --accent-hover: #d62839; /* Darker Red */
-    --accent-light: #ffe3e3; /* Light Red Soft Highlight */
+    --accent: #e63946;       
+    --accent-hover: #d62839; 
+    --accent-light: #ffe3e3; 
     --error: #fa5252;
+    --dropdown-bg: #ffffff;
+    --dropdown-hover: #f1f3f5;
+}
+
+body.dark-mode {
+    /* Dark Mode Variables Override */
+    --bg-color: #0d0e15;
+    --card-bg: #161824;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --accent: #ff4d5a;
+    --accent-hover: #e63946;
+    --accent-light: rgba(255, 77, 90, 0.15);
+    --dropdown-bg: #1f2235;
+    --dropdown-hover: #2a2e48;
 }
 
 * {
@@ -26,10 +43,10 @@ body {
     align-items: center;
     overflow-x: hidden;
     padding: 2rem;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Base Card Style */
+/* Card layout wrapper */
 .card {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -41,15 +58,15 @@ body {
     text-align: center;
 }
 
-h2 { margin-bottom: 0.5rem; font-size: 1.8rem; color: var(--text-main); }
+h2 { margin-bottom: 0.5rem; font-size: 1.8rem; }
 p { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; }
 
-/* Form Fields */
+/* Interactive Input styles */
 .input-group { margin-bottom: 1.25rem; }
 input {
     width: 100%;
     padding: 0.85rem 1.1rem;
-    background: #f1f3f5;
+    background: rgba(0,0,0,0.03);
     border: 1px solid transparent;
     border-radius: 10px;
     color: var(--text-main);
@@ -57,8 +74,11 @@ input {
     outline: none;
     transition: 0.25s ease;
 }
+body.dark-mode input {
+    background: rgba(255,255,255,0.05);
+}
 input:focus { 
-    background: #fff;
+    background: var(--card-bg);
     border-color: var(--accent);
     box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.15);
 }
@@ -81,9 +101,9 @@ button:hover {
     box-shadow: 0 5px 15px rgba(230, 57, 70, 0.3);
 }
 
-.error-msg { color: var(--error); margin-top: 1rem; margin-bottom: 0; font-size: 0.85rem; }
+.error-msg { color: var(--error); margin-top: 1rem; font-size: 0.85rem; }
 
-/* Dashboard Frame */
+/* Dashboard layout elements */
 #dashboard-container {
     width: 100%;
     max-width: 1200px;
@@ -99,17 +119,63 @@ header {
     padding-bottom: 1.5rem;
     margin-bottom: 2.5rem;
 }
-header h1 { font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
+header h1 { font-size: 2.2rem; font-weight: 700; }
 .subtitle { margin: 0; text-align: left; margin-top: 0.25rem; }
 
-/* Temporary Avatar Placeholder replacing Logout Button */
-.profile-area {
-    cursor: pointer;
-    transition: transform 0.2s ease;
+/* Controls Layout Zone */
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
 }
-.profile-area:hover {
-    transform: scale(1.05);
+
+#theme-toggle {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.1rem;
 }
+#theme-toggle:hover {
+    background: var(--accent-light);
+    color: var(--accent);
+    box-shadow: none;
+    transform: none;
+}
+
+/* Moving Text Profile Feature */
+.profile-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.profile-username-hover {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-main);
+    margin-right: 12px;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* Trigger movement on hover OR when active dropdown is open */
+.profile-wrapper:hover .profile-username-hover,
+.profile-wrapper.active .profile-username-hover {
+    opacity: 1;
+    transform: translateX(0);
+}
+
 .avatar-placeholder {
     width: 48px;
     height: 48px;
@@ -122,9 +188,58 @@ header h1 { font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
     font-weight: bold;
     font-size: 0.95rem;
     box-shadow: 0 4px 10px rgba(230, 57, 70, 0.25);
+    cursor: pointer;
+    user-select: none;
+    z-index: 10;
 }
 
-/* Friend Grid Cards */
+/* Custom Dropdown Styling */
+.profile-dropdown {
+    position: absolute;
+    top: 58px;
+    right: 0;
+    background: var(--dropdown-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    width: 170px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    z-index: 100;
+    overflow: hidden;
+    animation: dropdownFade 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes dropdownFade {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.profile-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.75rem 1rem;
+    color: var(--text-main);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+.profile-dropdown a i {
+    width: 16px;
+    color: var(--text-muted);
+}
+.profile-dropdown a:hover {
+    background: var(--dropdown-hover);
+}
+.profile-dropdown a:hover i {
+    color: var(--accent);
+}
+.profile-dropdown .dropdown-logout {
+    border-top: 1px solid var(--border-color);
+    color: var(--error);
+}
+
+/* Grid layout implementation */
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -138,7 +253,6 @@ header h1 { font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
     padding: 1.75rem;
     display: flex;
     flex-direction: column;
-    text-align: left;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.02);
     transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
@@ -153,7 +267,7 @@ header h1 { font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
     align-items: center;
     margin-bottom: 1rem;
 }
-.friend-name { font-size: 1.35rem; font-weight: 700; color: var(--text-main); }
+.friend-name { font-size: 1.35rem; font-weight: 700; }
 .friend-class {
     background: var(--accent-light);
     color: var(--accent);
@@ -167,13 +281,13 @@ header h1 { font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
     color: var(--text-muted);
     font-size: 0.9rem;
     margin-bottom: 1.75rem;
-    background: #f8f9fa;
+    background: rgba(0,0,0,0.02);
+    body.dark-mode & { background: rgba(255,255,255,0.02); }
     padding: 0.65rem 0.85rem;
     border-radius: 8px;
     border-left: 3px solid var(--accent);
 }
 
-/* PDF Lists */
 .pdf-list { list-style: none; margin-top: auto; }
 .pdf-item { margin-bottom: 0.6rem; }
 .pdf-link {
@@ -183,11 +297,11 @@ header h1 { font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
     color: var(--text-main);
     text-decoration: none;
     padding: 0.75rem 0.9rem;
-    background: #f8f9fa;
+    background: rgba(0,0,0,0.02);
+    body.dark-mode & { background: rgba(255,255,255,0.02); }
     border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 0.88rem;
-    font-weight: 500;
     transition: all 0.2s ease;
 }
 .pdf-link:hover { 
@@ -197,10 +311,8 @@ header h1 { font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
 }
 .pdf-date { color: var(--text-muted); font-size: 0.75rem; }
 
-/* Smooth Loading Spinner and Animations */
-#loader-container {
-    text-align: center;
-}
+/* Loader Spinner setup */
+#loader-container { text-align: center; }
 .spinner {
     width: 45px;
     height: 45px;
@@ -210,22 +322,63 @@ header h1 { font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
     animation: spin 1s linear infinite;
     margin: 0 auto 1.25rem auto;
 }
-.loading-text {
-    font-weight: 600;
-    color: var(--text-main);
-    letter-spacing: 0.5px;
-}
+.loading-text { font-weight: 600; letter-spacing: 0.5px; }
 
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
 
-/* Fade In Utility Class */
-.fade-in {
-    animation: fadeIn 0.4s ease forwards;
+/* Pop-Up Modal Design Configuration */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
 }
+.modal-content {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    text-align: left;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.75rem;
+}
+.modal-header h3 { font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+.close-modal-btn {
+    background: transparent; color: var(--text-muted); border: none; font-size: 1.5rem; cursor: pointer; width: auto; padding: 0;
+}
+.close-modal-btn:hover { color: var(--accent); box-shadow: none; transform: none; }
+.modal-instruction { font-size: 0.9rem; margin-bottom: 1.25rem; line-height: 1.4; }
+.step-box {
+    background: rgba(0,0,0,0.02);
+    body.dark-mode & { background: rgba(255,255,255,0.02); }
+    border-left: 4px solid var(--accent);
+    padding: 1rem;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 1.5rem;
+}
+.step-box strong { font-size: 0.9rem; display: block; margin-bottom: 0.5rem; }
+.step-box ol { padding-left: 1.2rem; font-size: 0.85rem; color: var(--text-muted); }
+.step-box li { margin-bottom: 0.4rem; }
+.modal-close-action { padding: 0.75rem; }
 
+/* Utilities */
+.fade-in { animation: fadeIn 0.4s ease forwards; }
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }

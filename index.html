@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>6B Survivors Hub</title>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="light-mode"> <!-- Defaults to light-mode, JS handles preference -->
 
     <!-- LOADING SCREEN -->
     <div id="loader-container" class="hidden">
@@ -36,9 +38,24 @@
                 <p class="subtitle">Connected across 7th Grade 🎓</p>
             </div>
             
-            <!-- TEMPORARY PLACEHOLDER PROFILE PIC -->
-            <div class="profile-area" onclick="handleLogout()" title="Click to Log Out">
-                <div class="avatar-placeholder">6B</div>
+            <div class="header-controls">
+                <!-- Theme Mode Toggle Button -->
+                <button id="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+
+                <!-- Profile Interactive Area -->
+                <div class="profile-wrapper" id="profileWrapper">
+                    <span class="profile-username-hover" id="hoverUsername">Guest</span>
+                    <div class="avatar-placeholder" onclick="toggleDropdown(event)">6B</div>
+                    
+                    <!-- Dropdown Menu -->
+                    <div class="profile-dropdown hidden" id="profileDropdown">
+                        <a href="#" onclick="openUploadModal(event)"><i class="fas fa-upload"></i> Upload File</a>
+                        <a href="#" onclick="alert('Profile view feature coming soon!')"><i class="fas fa-user"></i> View Profile</a>
+                        <a href="#" class="dropdown-logout" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -46,6 +63,27 @@
         <main id="friends-grid" class="grid">
             <!-- JavaScript inserts cards here -->
         </main>
+    </div>
+
+    <!-- POP-UP UPLOAD MODAL -->
+    <div id="upload-modal" class="modal-overlay hidden" onclick="closeUploadModal(event)">
+        <div class="modal-content fade-in" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-upload"></i> Push Work to Repository</h3>
+                <button class="close-modal-btn" onclick="closeUploadModal()">&times;</button>
+            </div>
+            <p class="modal-instruction">Because this is a completely static frontend project hosted on Vercel without an active backend web server, you cannot save direct uploads straight into your browser stream permanently.</p>
+            
+            <div class="step-box">
+                <strong><i class="fas fa-code-branch"></i> Follow these simple steps to update:</strong>
+                <ol>
+                    <li>Drop your PDF into your designated folder inside your local directory (`uploads/friendX/`).</li>
+                    <li>Open your updated <code>data.json</code> file and paste a new row listing your file path and date stamp.</li>
+                    <li>Commit and Push the changes through your <strong>GitHub Desktop client</strong>!</li>
+                </ol>
+            </div>
+            <button class="modal-close-action" onclick="closeUploadModal()">Got it!</button>
+        </div>
     </div>
 
     <script src="app.js"></script>
