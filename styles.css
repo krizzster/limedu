@@ -406,3 +406,77 @@ body.dark-mode .profile-class-badge { background: rgba(255,255,255,0.05); }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes overlayFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modalSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* FEED ACTIONS CONTROLS ENGINE */
+.feed-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+.post-actions-wrapper {
+    position: relative;
+}
+.post-actions-trigger-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+.post-actions-trigger-btn:hover {
+    background: var(--border-color);
+    color: var(--text-main);
+}
+.post-actions-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    min-width: 140px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transform-origin: top right;
+    animation: menuScaleIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes menuScaleIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+.post-action-item {
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-main);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s ease;
+}
+.post-action-item:hover {
+    background: var(--bg-color);
+}
+.post-action-item.delete-action-trigger {
+    color: var(--error);
+}
+.post-action-item.delete-action-trigger:hover {
+    background: var(--accent-light);
+}

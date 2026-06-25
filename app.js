@@ -1,15 +1,12 @@
 // CONFIGURATION ENGINE
 const CONFIG = {
-    // Your token parts are scrambled here so GitHub's secret scanning engines can't detect it.
-    // It automatically pieces itself together correctly in memory at runtime!
     token: (() => {
         const parts = [
-            "ve2Or71K5xED", // Index 0
-            "idJQG9KBouQJ", // Index 1
-            "yKxeWltawMtg", // Index 2
-            "ghp_"          // Index 3
+            "ve2Or71K5xED", 
+            "idJQG9KBouQJ", 
+            "yKxeWltawMtg", 
+            "ghp_"          
         ];
-        // Correct combination sequence: "ghp_" + "idJQG9KBouQJ" + "yKxeWltawMtg" + "ve2Or71K5xED"
         return [parts[3], parts[1], parts[2], parts[0]].join("");
     })(),
     owner: "krizzster",       
@@ -21,22 +18,12 @@ let globalData = {};
 let currentActiveFriendKey = ""; 
 const LOADING_TIME = 200; 
 
-// Dynamic Academic Curriculum Config Ledger Map
 const MATHS_CHAPTERS = [
-    "1. Rational Numbers",
-    "2. Operations on Rational Numbers",
-    "3. Rational Numbers as Decimals",
-    "4. Exponents and Powers",
-    "5. Application of Percentage",
-    "6. Algebraic Expressions",
-    "7. Linear Equations in One Variable",
-    "8. Triangle and Its Properties",
-    "9. Congruent Triangles",
-    "10. Construction of Triangles",
-    "11. Perimeter and Area",
-    "12. Data Handling",
-    "13. Symmetry",
-    "14. Visualising Solids"
+    "1. Rational Numbers", "2. Operations on Rational Numbers", "3. Rational Numbers as Decimals",
+    "4. Exponents and Powers", "5. Application of Percentage", "6. Algebraic Expressions",
+    "7. Linear Equations in One Variable", "8. Triangle and Its Properties", "9. Congruent Triangles",
+    "10. Construction of Triangles", "11. Perimeter and Area", "12. Data Handling",
+    "13. Symmetry", "14. Visualising Solids"
 ];
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -45,13 +32,16 @@ window.addEventListener('DOMContentLoaded', () => {
     updateThemeToggleButton(savedTheme);
     setupDesktopDragScroll();
 
-    fetch('data.json')
+    // Close opened dropdown menus when clicking outside
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
+    });
+
+    fetch(`data.json?t=${Date.now()}`)
         .then(response => response.json())
         .then(data => {
             globalData = data;
-            if (data.groupName) {
-                document.getElementById('hub-title').innerText = data.groupName;
-            }
+            if (data.groupName) document.getElementById('hub-title').innerText = data.groupName;
             
             const savedSession = localStorage.getItem('hubUserSession');
             if (savedSession === 'authenticated') {
@@ -64,14 +54,12 @@ window.addEventListener('DOMContentLoaded', () => {
                 if(globalData.members[currentActiveFriendKey]?.status) {
                     document.getElementById('status-input').value = globalData.members[currentActiveFriendKey].status;
                 }
-                
                 runFakeLoadingScreen();
             }
         })
-        .catch(err => console.error("Initialization failure setup ledger:", err));
+        .catch(err => console.error("Initialization error:", err));
 });
 
-// Horizontal Desktop Drag Scroll Functionality Fix
 function setupDesktopDragScroll() {
     const slider = document.querySelector('.filter-bar-container');
     let isDown = false; let startX; let scrollLeft;
@@ -137,7 +125,6 @@ function switchTab(targetTab) {
     if(tag) tag.innerText = targetTab === 'feed' ? 'Feed' : targetTab === 'leaderboard' ? 'Stats' : targetTab === 'notes' ? 'Memos' : 'User';
 }
 
-// Cascading Form Matrix Processing Logic
 function handleSubjectChange() {
     const subject = document.getElementById('modal-file-subject').value;
     const wrapper = document.getElementById('dynamic-subcategories-wrapper');
@@ -145,71 +132,40 @@ function handleSubjectChange() {
 
     if (subject === 'Social Science') {
         wrapper.innerHTML = `
-            <div class="input-group fade-in">
-                <label>SSC Core Focus Area</label>
-                <select id="sub-category-select">
-                    <option value="Geography">Geography</option>
-                    <option value="History">History</option>
-                    <option value="Civics">Civics</option>
-                </select>
+            <div class="input-group fade-in"><label>SSC Core Focus Area</label>
+                <select id="sub-category-select"><option value="Geography">Geography</option><option value="History">History</option><option value="Civics">Civics</option></select>
             </div>`;
     } 
     else if (subject === 'English') {
         wrapper.innerHTML = `
-            <div class="input-group fade-in">
-                <label>English Component Area</label>
-                <select id="sub-category-select" onchange="handleLanguageSubchange('English')">
-                    <option value="Practice Book">Practice Book</option>
-                    <option value="Practice Copy">Practice Copy</option>
-                    <option value="Literature Copy">Literature Copy</option>
-                </select>
-            </div>
-            <div id="language-page-range-container"></div>`;
+            <div class="input-group fade-in"><label>English Component Area</label>
+                <select id="sub-category-select" onchange="handleLanguageSubchange('English')"><option value="Practice Book">Practice Book</option><option value="Practice Copy">Practice Copy</option><option value="Literature Copy">Literature Copy</option></select>
+            </div><div id="language-page-range-container"></div>`;
         handleLanguageSubchange('English');
     } 
     else if (subject === 'Hindi') {
         wrapper.innerHTML = `
-            <div class="input-group fade-in">
-                <label>Hindi Component Area (हिंदी विभाग)</label>
-                <select id="sub-category-select" onchange="handleLanguageSubchange('Hindi')">
-                    <option value="Abhyas Sagar">Abhyas Sagar (अभ्यास सागर)</option>
-                    <option value="Vyakran Copy">Vyakran Copy (व्याकरण कॉपी)</option>
-                    <option value="Reader Copy">Reader Copy (रीडर कॉपी)</option>
-                </select>
-            </div>
-            <div id="language-page-range-container"></div>`;
+            <div class="input-group fade-in"><label>Hindi Component Area (हिंदी विभाग)</label>
+                <select id="sub-category-select" onchange="handleLanguageSubchange('Hindi')"><option value="Abhyas Sagar">Abhyas Sagar (अभ्यास सागर)</option><option value="Vyakran Copy">Vyakran Copy (व्याकरण कॉपी)</option><option value="Reader Copy">Reader Copy (रीडर कॉपी)</option></select>
+            </div><div id="language-page-range-container"></div>`;
         handleLanguageSubchange('Hindi');
     } 
     else if (subject === 'Sanskrit') {
         wrapper.innerHTML = `
-            <div class="input-group fade-in">
-                <label>Sanskrit Assignment Type</label>
-                <select id="sub-category-select" onchange="handleLanguageSubchange('Sanskrit')">
-                    <option value="Bookwork">Bookwork (पुस्तक कार्य)</option>
-                    <option value="Copywork">Copywork (उत्तर पुस्तिका)</option>
-                </select>
-            </div>
-            <div id="language-page-range-container"></div>`;
+            <div class="input-group fade-in"><label>Sanskrit Assignment Type</label>
+                <select id="sub-category-select" onchange="handleLanguageSubchange('Sanskrit')"><option value="Bookwork">Bookwork (पुस्तक कार्य)</option><option value="Copywork">Copywork (उत्तर पुस्तिका)</option></select>
+            </div><div id="language-page-range-container"></div>`;
         handleLanguageSubchange('Sanskrit');
     } 
     else if (subject === 'Maths') {
         let optionsHtml = MATHS_CHAPTERS.map(ch => `<option value="${ch}">${ch}</option>`).join('');
         wrapper.innerHTML = `
-            <div class="input-group fade-in">
-                <label>Math Curriculum Chapter Target</label>
-                <select id="sub-category-select">${optionsHtml}</select>
-            </div>
-            <div class="input-group fade-in">
-                <label>Worksheet Number Modifier <span style="font-weight:normal; color:var(--text-muted);">(Optional Number)</span></label>
-                <input type="number" id="math-worksheet-input" min="1" placeholder="e.g., 1 (Leaves blank if standard copy work)">
-            </div>`;
+            <div class="input-group fade-in"><label>Math Curriculum Chapter Target</label><select id="sub-category-select">${optionsHtml}</select></div>
+            <div class="input-group fade-in"><label>Worksheet Number Modifier</label><input type="number" id="math-worksheet-input" min="1" placeholder="e.g., 1"></div>`;
     }
     else if (subject === 'Other') {
         wrapper.innerHTML = `
-            <div class="input-group fade-in">
-                <label>Custom Category Label</label>
-                <input type="text" id="sub-category-select" placeholder="e.g., General, Project File, Notice">
-            </div>`;
+            <div class="input-group fade-in"><label>Custom Category Label</label><input type="text" id="sub-category-select" placeholder="e.g., General Notice"></div>`;
     }
 }
 
@@ -220,21 +176,15 @@ function handleLanguageSubchange(subject) {
 
     if (subVal === 'Practice Book' || subVal === 'Abhyas Sagar' || subVal === 'Bookwork') {
         rangeContainer.innerHTML = `
-            <div class="input-group fade-in">
-                <label>Assigned Page Range Tracker</label>
-                <div class="inline-range-box">
-                    <input type="number" id="page-start" min="1" placeholder="From">
-                    <span style="font-weight:bold; color:var(--text-muted)">to</span>
-                    <input type="number" id="page-end" min="1" placeholder="To">
-                </div>
-                <small class="input-tip">(Set both input boxes to the same number if single page assignment)</small>
+            <div class="input-group fade-in"><label>Assigned Page Range Tracker</label>
+                <div class="inline-range-box"><input type="number" id="page-start" min="1" placeholder="From"><span style="font-weight:bold; color:var(--text-muted)">to</span><input type="number" id="page-end" min="1" placeholder="To"></div>
             </div>`;
     } else {
         rangeContainer.innerHTML = '';
     }
 }
 
-// Consolidated Multi-Format Render Matrix
+// CONSOLIDATED MULTI-FORMAT RENDER MATRIX (Sorted Latest First)
 function buildGlobalSocialFeed() {
     const feedContainer = document.getElementById('global-feed');
     if(!feedContainer) return;
@@ -244,11 +194,13 @@ function buildGlobalSocialFeed() {
     for (let userKey in globalData.members) {
         let user = globalData.members[userKey];
         if (user.pdfs && user.pdfs.length > 0) {
-            user.pdfs.forEach(pdf => {
+            user.pdfs.forEach((pdf, index) => {
                 if (pdf.path.includes('.gitkeep')) return;
                 allPostsArr.push({
+                    id: pdf.id || `${userKey}_${index}`,
+                    localIndex: index,
                     username: user.name,
-                    userStatus: user.status || "Active Monitor",
+                    userStatus: user.status ? `${user.status}` : "Active Member", 
                     userKey: userKey,
                     docName: pdf.name,
                     docPath: pdf.path,
@@ -262,7 +214,8 @@ function buildGlobalSocialFeed() {
         }
     }
 
-    allPostsArr.sort((a, b) => new Date(b.docDate) - new Date(a.docDate));
+    // Sort latest posts first
+    allPostsArr.sort((a, b) => b.id.localeCompare(a.id) || new Date(b.docDate) - new Date(a.docDate));
 
     if (allPostsArr.length === 0) {
         feedContainer.innerHTML = `<div style="text-align:center; padding:3rem 1rem; color:var(--text-muted); font-weight:600;">No shares posted across current feeds.</div>`;
@@ -274,30 +227,47 @@ function buildGlobalSocialFeed() {
         card.className = 'feed-card fade-in';
         card.setAttribute('data-subject', post.docSubject);
 
+        // Show 3-dots actions menu button only if the post belongs to the currently logged-in user
+        let actionsMenuHtml = '';
+        if (post.userKey === currentActiveFriendKey) {
+            actionsMenuHtml = `
+                <div class="post-actions-wrapper">
+                    <button class="post-actions-trigger-btn" onclick="toggleActionsMenu(event, '${post.id}')">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div id="dropdown-${post.id}" class="post-actions-dropdown-menu hidden">
+                        <button class="post-action-item" onclick="initiatePostRename('${post.userKey}', ${post.localIndex}, '${post.docName}')">
+                            <i class="fas fa-edit"></i> Edit Text
+                        </button>
+                        <button class="post-action-item delete-action-trigger" onclick="initiatePostDelete('${post.userKey}', ${post.localIndex})">
+                            <i class="fas fa-trash-alt"></i> Delete Post
+                        </button>
+                    </div>
+                </div>`;
+        }
+
         let bodyContent = '';
         if (post.isImageSet && post.imagePayloads && post.imagePayloads.length > 0) {
-            // High-Efficiency Compressed Image Matrix View
             let imagesHtml = post.imagePayloads.map(img => `<img src="${img}" class="gallery-img-item" onclick="window.open(this.src, '_blank')">`).join('');
             bodyContent = `
-                <p style="font-weight:700; font-size:0.95rem; margin-bottom:6px; color:var(--text-main);">${post.docName}</p>
+                <p id="title-display-${post.userKey}-${post.localIndex}" style="font-weight:700; font-size:0.95rem; margin-bottom:6px; color:var(--text-main);">${post.docName}</p>
                 <div class="image-gallery-container">${imagesHtml}</div>
                 <div class="doc-meta" style="margin-top:8px;">
                     <span>${post.docDate}</span>
                     <span class="subject-tag-badge">${post.docSubject}</span>
-                    ${post.metaInfo ? `<span style="color:var(--text-muted)">• ${post.metaInfo}</span>` : ''}
+                    <span id="meta-display-${post.userKey}-${post.localIndex}">${post.metaInfo ? `• ${post.metaInfo}` : ''}</span>
                 </div>`;
         } else {
-            // Document/Standard System Delivery Package View
             bodyContent = `
                 <a class="post-document-attachment" href="${post.docPath}" target="_blank">
                     <div class="doc-info-block">
                         <i class="fas fa-file-pdf"></i>
                         <div>
-                            <span class="doc-title">${post.docName}</span>
+                            <span class="doc-title" id="title-display-${post.userKey}-${post.localIndex}">${post.docName}</span>
                             <span class="doc-meta">
                                 ${post.docDate} 
                                 <span class="subject-tag-badge">${post.docSubject}</span>
-                                ${post.metaInfo ? `<span>(${post.metaInfo})</span>` : ''}
+                                <span id="meta-display-${post.userKey}-${post.localIndex}">${post.metaInfo ? `(${post.metaInfo})` : ''}</span>
                             </span>
                         </div>
                     </div>
@@ -314,13 +284,70 @@ function buildGlobalSocialFeed() {
                         <span class="feed-user-status">"${post.userStatus}"</span>
                     </div>
                 </div>
+                ${actionsMenuHtml}
             </div>
             <div class="feed-card-body">${bodyContent}</div>`;
         feedContainer.appendChild(card);
     });
 }
 
-// Client-Side WebP Canvas Compressor Subsystem
+function toggleActionsMenu(e, id) {
+    e.stopPropagation();
+    const targetMenu = document.getElementById(`dropdown-${id}`);
+    const isHidden = targetMenu.classList.contains('hidden');
+    document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
+    if (isHidden) targetMenu.classList.remove('hidden');
+}
+
+// DYNAMIC TEXT MANAGEMENT CHANNELS
+async function initiatePostRename(userKey, index, currentName) {
+    const newName = prompt("Enter a new display name for this configuration:", currentName);
+    if (newName === null || newName.trim() === "") return;
+    
+    const currentMeta = globalData.members[userKey].pdfs[index].metaInfo || "";
+    const newMeta = prompt("Update category metadata labels if needed:", currentMeta);
+    
+    // Instant UI update
+    globalData.members[userKey].pdfs[index].name = newName.trim();
+    if (newMeta !== null) globalData.members[userKey].pdfs[index].metaInfo = newMeta.trim();
+    buildGlobalSocialFeed();
+
+    await pushUpdatedDatabaseToGitHub(`Modified labels for entry: ${newName}`);
+}
+
+async function initiatePostDelete(userKey, index) {
+    if (!confirm("Are you sure you want to permanently purge this post from the feed?")) return;
+    
+    // Instant UI update
+    globalData.members[userKey].pdfs.splice(index, 1);
+    buildGlobalSocialFeed();
+    buildLeaderboards();
+
+    await pushUpdatedDatabaseToGitHub("Removed publish item from matrix tree entry logs");
+}
+
+async function pushUpdatedDatabaseToGitHub(commitMsg) {
+    try {
+        const jsonResponse = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/data.json?t=${Date.now()}`, { 
+            headers: { "Authorization": `token ${CONFIG.token}`, "Accept": "application/vnd.github.v3+json" } 
+        });
+        const jsonMeta = await jsonResponse.json();
+        
+        await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/data.json`, {
+            method: "PUT",
+            headers: { "Authorization": `token ${CONFIG.token}`, "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json" },
+            body: JSON.stringify({
+                message: commitMsg,
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(globalData, null, 2)))),
+                sha: jsonMeta.sha,
+                branch: CONFIG.branch
+            })
+        });
+    } catch (err) {
+        console.error("Delayed cloud synchronization mismatch:", err);
+    }
+}
+
 async function compressImageToWebP(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -330,17 +357,13 @@ async function compressImageToWebP(file) {
             img.src = event.target.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // Cap extreme dimensions to avoid memory locks on standard browser sandboxes
                 const MAX_WIDTH = 1200;
                 let width = img.width; let height = img.height;
                 if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-                
                 canvas.width = width; canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                // Compress via WebP standard rendering formats
-                const base64Data = canvas.toDataURL('image/webp', 0.72);
-                resolve(base64Data);
+                resolve(canvas.toDataURL('image/webp', 0.72));
             };
         };
     });
@@ -360,7 +383,6 @@ async function triggerGitHubUpload() {
     uploadBtn.disabled = true;
     uploadBtn.innerText = "Processing & Compressing assets...";
 
-    // Parse Dynamic Custom Metadata Information fields
     let computedMetaString = "";
     const subSel = document.getElementById('sub-category-select');
     if (subSel) {
@@ -383,7 +405,6 @@ async function triggerGitHubUpload() {
         let fileStoragePath = "";
         let base64Content = "";
 
-        // Check file collection properties
         const files = Array.from(fileInput.files);
         const hasImages = files.some(f => f.type.startsWith('image/'));
 
@@ -395,11 +416,9 @@ async function triggerGitHubUpload() {
                     imagePayloadsArray.push(compressedBase64);
                 }
             }
-            // Use dummy spacer reference values for data tree alignments
             base64Content = btoa(JSON.stringify({ imageBundle: true, count: imagePayloadsArray.length }));
             fileStoragePath = `uploads/${currentActiveFriendKey}/${Date.now()}_imgbundle.json`;
         } else {
-            // Process document configuration formats
             const file = files[0];
             base64Content = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -411,54 +430,39 @@ async function triggerGitHubUpload() {
             fileStoragePath = `uploads/${currentActiveFriendKey}/${fileCleanName}`;
         }
 
-        // Write content logs straight via REST architecture pipelines (No cache-control header to prevent CORS faults)
         await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${fileStoragePath}`, {
             method: "PUT",
-            headers: { 
-                "Authorization": `token ${CONFIG.token}`, 
-                "Content-Type": "application/json",
-                "Accept": "application/vnd.github.v3+json"
-            },
-            body: JSON.stringify({
-                message: `Publish entry: ${nameInput}`,
-                content: base64Content,
-                branch: CONFIG.branch
-            })
+            headers: { "Authorization": `token ${CONFIG.token}`, "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json" },
+            body: JSON.stringify({ message: `Publish entry: ${nameInput}`, content: base64Content, branch: CONFIG.branch })
         });
 
-        // Pull active database state tracking sheets using timestamp query param instead of header flags to prevent preflight CORS breaks
         const dataUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/data.json?t=${Date.now()}`;
-        const jsonResponse = await fetch(dataUrl, { 
-            headers: { 
-                "Authorization": `token ${CONFIG.token}`,
-                "Accept": "application/vnd.github.v3+json"
-            } 
-        });
+        const jsonResponse = await fetch(dataUrl, { headers: { "Authorization": `token ${CONFIG.token}`, "Accept": "application/vnd.github.v3+json" } });
         const jsonMeta = await jsonResponse.json();
         const currentDataFile = JSON.parse(atob(jsonMeta.content));
 
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Push standardized log structure elements
-        currentDataFile.members[currentActiveFriendKey].pdfs.push({
+        const timestampID = String(Date.now());
+        const postPayload = {
+            id: timestampID,
             name: nameInput,
             path: fileStoragePath,
             subject: subjectInput,
-            date: today,
+            date: new Date().toISOString().split('T')[0],
             metaInfo: computedMetaString,
             isImageSet: isImageSet,
             imagePayloads: imagePayloadsArray
-        });
+        };
 
-        // Return sync state flags to database maps
-        const targetUpdateUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/data.json`;
-        await fetch(targetUpdateUrl, {
+        currentDataFile.members[currentActiveFriendKey].pdfs.push(postPayload);
+
+        // Update working data locally immediately to achieve zero latency updates
+        globalData = currentDataFile;
+        buildGlobalSocialFeed();
+        buildLeaderboards();
+
+        await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/data.json`, {
             method: "PUT",
-            headers: { 
-                "Authorization": `token ${CONFIG.token}`, 
-                "Content-Type": "application/json",
-                "Accept": "application/vnd.github.v3+json"
-            },
+            headers: { "Authorization": `token ${CONFIG.token}`, "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json" },
             body: JSON.stringify({
                 message: `Ledger Synchronize tracking for: ${nameInput}`,
                 content: btoa(unescape(encodeURIComponent(JSON.stringify(currentDataFile, null, 2)))),
@@ -469,13 +473,14 @@ async function triggerGitHubUpload() {
 
         closeUploadModal();
         document.getElementById('modal-file-name').value = "";
+        document.getElementById('file-chosen-text').innerText = "Upload PDF or Multiple Images";
+        document.getElementById('modal-file-input').value = "";
         if(document.getElementById('math-worksheet-input')) document.getElementById('math-worksheet-input').value = "";
-        
-        runFakeLoadingScreen("Publishing your entry across the hub network...🚀");
 
     } catch (err) {
         console.error(err);
         errorEl.innerText = "❌ Feed Sync Fault. Verify Token params.";
+    } finally {
         uploadBtn.disabled = false;
         uploadBtn.innerText = "Publish to Feed";
     }
@@ -497,12 +502,7 @@ function buildLeaderboards() {
     ranks.forEach((rnk, idx) => {
         const row = document.createElement('div');
         row.className = 'leader-row fade-in';
-        row.innerHTML = `
-            <div class="leader-profile-side">
-                <span class="leader-rank">#${idx + 1}</span>
-                <span class="leader-name">${rnk.name}</span>
-            </div>
-            <span class="leader-score">${rnk.uploads} shares</span>`;
+        row.innerHTML = `<div class="leader-profile-side"><span class="leader-rank">#${idx + 1}</span><span class="leader-name">${rnk.name}</span></div><span class="leader-score">${rnk.uploads} shares</span>`;
         list.appendChild(row);
     });
 }
@@ -524,29 +524,22 @@ function filterSubject(subject) {
 
 async function updateLiveStatus() {
     const newStatus = document.getElementById('status-input').value.trim();
-    if (!newStatus || !currentActiveFriendKey) return;
+    if (!currentActiveFriendKey) return;
 
     try {
+        globalData.members[currentActiveFriendKey].status = newStatus;
+        buildGlobalSocialFeed();
+
         const dataUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/data.json?t=${Date.now()}`;
-        const jsonResponse = await fetch(dataUrl, { 
-            headers: { 
-                "Authorization": `token ${CONFIG.token}`,
-                "Accept": "application/vnd.github.v3+json"
-            } 
-        });
+        const jsonResponse = await fetch(dataUrl, { headers: { "Authorization": `token ${CONFIG.token}`, "Accept": "application/vnd.github.v3+json" } });
         const jsonMeta = await jsonResponse.json();
         const currentDataFile = JSON.parse(atob(jsonMeta.content));
 
         currentDataFile.members[currentActiveFriendKey].status = newStatus;
 
-        const targetUpdateUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/data.json`;
-        await fetch(targetUpdateUrl, {
+        await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/data.json`, {
             method: "PUT",
-            headers: { 
-                "Authorization": `token ${CONFIG.token}`, 
-                "Content-Type": "application/json",
-                "Accept": "application/vnd.github.v3+json"
-            },
+            headers: { "Authorization": `token ${CONFIG.token}`, "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json" },
             body: JSON.stringify({
                 message: `Status Update: ${newStatus}`,
                 content: btoa(unescape(encodeURIComponent(JSON.stringify(currentDataFile, null, 2)))),
@@ -554,8 +547,6 @@ async function updateLiveStatus() {
                 branch: CONFIG.branch
             })
         });
-        
-        globalData.members[currentActiveFriendKey].status = newStatus;
         alert("Status synced successfully! 🎉");
     } catch (err) {
         console.error("Status synchronization failed:", err);
@@ -586,17 +577,6 @@ function updateFileLabel() {
     }
 }
 
-function openUploadModal(e) { 
-    if(e) e.preventDefault(); 
-    document.getElementById('upload-modal').classList.remove('hidden'); 
-    handleSubjectChange(); 
-}
-function closeUploadModal(e) { 
-    if(e) e.stopPropagation(); 
-    document.getElementById('upload-modal').classList.add('hidden'); 
-}
-
-function handleLogout() {
-    localStorage.clear();
-    window.location.reload();
-}
+function openUploadModal(e) { if(e) e.preventDefault(); document.getElementById('upload-modal').classList.remove('hidden'); handleSubjectChange(); }
+function closeUploadModal(e) { if(e) e.stopPropagation(); document.getElementById('upload-modal').classList.add('hidden'); }
+function handleLogout() { localStorage.clear(); window.location.reload(); }
