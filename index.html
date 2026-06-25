@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>6B Survivors Hub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>6B Crew</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,23 +14,25 @@
         <p class="loading-text" id="loader-text">Synchronizing Hub Data...</p>
     </div>
 
-    <div id="login-container" class="card fade-in">
-        <h2>🎒 Friend Hub Login</h2>
-        <p>Connect with your 6B crew</p>
-        <div class="input-group">
-            <input type="text" id="username" placeholder="Your Name (e.g. Kriz)" required>
+    <div id="login-container" class="login-wrapper fade-in">
+        <div class="card">
+            <h2>🎒 6B Crew Login</h2>
+            <p>Connect with your 6B crew</p>
+            <div class="input-group">
+                <input type="text" id="username" placeholder="Your Name (e.g. Kriz)" required>
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" placeholder="Password" required>
+            </div>
+            <button id="login-btn" onclick="handleLogin()">Login</button>
+            <p id="login-error" class="error-msg"></p>
         </div>
-        <div class="input-group">
-            <input type="password" id="password" placeholder="Password" required>
-        </div>
-        <button id="login-btn" onclick="handleLogin()">Login</button>
-        <p id="login-error" class="error-msg"></p>
     </div>
 
     <div id="dashboard-container" class="hidden fade-in">
-        <header>
-            <div>
-                <h1 id="hub-title">The 6B Survivors Hub</h1>
+        <header class="main-header">
+            <div class="header-branding">
+                <h1 id="hub-title">The 6B Pirate Crew</h1>
                 <p class="subtitle">Connected across 7th Grade 🎓</p>
             </div>
             
@@ -39,9 +41,9 @@
                     <i class="fas fa-moon"></i>
                 </button>
 
-                <div class="profile-wrapper" id="profileWrapper">
+                <div class="profile-wrapper" id="profileWrapper" onclick="toggleDropdown(event)">
                     <span class="profile-username-hover" id="hoverUsername">Guest</span>
-                    <div class="avatar-placeholder" onclick="toggleDropdown(event)">6B</div>
+                    <div class="avatar-placeholder">6B</div>
                     
                     <div class="profile-dropdown hidden" id="profileDropdown">
                         <div class="status-updater-box" onclick="event.stopPropagation()">
@@ -55,12 +57,14 @@
             </div>
         </header>
 
-        <div class="filter-bar">
-            <button class="filter-btn active" onclick="filterSubject('all')">All Files</button>
-            <button class="filter-btn" onclick="filterSubject('Math')">Math</button>
-            <button class="filter-btn" onclick="filterSubject('Science')">Science</button>
-            <button class="filter-btn" onclick="filterSubject('English')">English</button>
-            <button class="filter-btn" onclick="filterSubject('History')">History</button>
+        <div class="filter-bar-container">
+            <div class="filter-bar">
+                <button class="filter-btn active" onclick="filterSubject('all')">All</button>
+                <button class="filter-btn" onclick="filterSubject('Math')">Math</button>
+                <button class="filter-btn" onclick="filterSubject('Science')">Science</button>
+                <button class="filter-btn" onclick="filterSubject('English')">English</button>
+                <button class="filter-btn" onclick="filterSubject('History')">History</button>
+            </div>
         </div>
 
         <main id="friends-grid" class="grid">
@@ -68,9 +72,9 @@
     </div>
 
     <div id="upload-modal" class="modal-overlay hidden" onclick="closeUploadModal(event)">
-        <div class="modal-content fade-in" onclick="event.stopPropagation()">
+        <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <h3><i class="fas fa-file-upload"></i> Upload to GitHub Repo</h3>
+                <h3><i class="fas fa-file-upload"></i> Upload to Repo</h3>
                 <button class="close-modal-btn" onclick="closeUploadModal()">&times;</button>
             </div>
             
