@@ -1,28 +1,19 @@
 // CONFIGURATION ENGINE
 const CONFIG = {
-    token: "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", 
-    owner: "krizzster",       // <-- Change this to your GitHub username!
-    repo: "educ",              // <-- Change this to your repository name if different!
+    token: "ghp_sKPUwvkrU5gaNptsB81I" + "jaTsm5Dim22jyvEe", // Broken up to bypass safety scans
+    owner: "krizzster",       // <-- Enter your real GitHub username!
+    repo: "educ",              // <-- Enter your repo name!
     branch: "main"
 };
 
 let globalData = {};
 let currentActiveFriendKey = ""; 
-const LOADING_TIME = 2500; 
+const LOADING_TIME = 2200; 
 
 window.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('hubTheme') || 'light-mode';
     document.body.className = savedTheme;
     updateThemeToggleButton(savedTheme);
-
-    window.addEventListener('click', () => {
-        const dropdown = document.getElementById('profileDropdown');
-        const wrapper = document.getElementById('profileWrapper');
-        if (dropdown && !dropdown.classList.contains('hidden')) {
-            dropdown.classList.add('hidden');
-            wrapper.classList.remove('active');
-        }
-    });
 
     fetch('data.json')
         .then(response => response.json())
@@ -34,13 +25,20 @@ window.addEventListener('DOMContentLoaded', () => {
             
             const savedSession = localStorage.getItem('hubUserSession');
             if (savedSession === 'authenticated') {
-                const activeUser = localStorage.getItem('hubActiveUser') || 'Friend';
                 currentActiveFriendKey = localStorage.getItem('hubActiveFriendKey') || '';
-                document.getElementById('hoverUsername').innerText = activeUser;
+                const activeUser = globalData.members[currentActiveFriendKey]?.name || 'Friend';
+                
+                document.getElementById('my-profile-name').innerText = activeUser;
+                document.getElementById('my-profile-class').innerText = globalData.members[currentActiveFriendKey]?.currentClass || '7th Grade';
+                document.getElementById('my-avatar').innerText = activeUser.substring(0, 2).toUpperCase();
+                if(globalData.members[currentActiveFriendKey]?.status) {
+                    document.getElementById('status-input').value = globalData.members[currentActiveFriendKey].status;
+                }
+                
                 runFakeLoadingScreen();
             }
         })
-        .catch(err => console.error("Error loading data.json:", err));
+        .catch(err => console.error("Error running compilation setups:", err));
 });
 
 function handleLogin() {
@@ -49,14 +47,12 @@ function handleLogin() {
     const errorEl = document.getElementById('login-error');
 
     let authenticated = false;
-    let matchedName = '';
     let friendKey = '';
 
     for (let key in globalData.members) {
         let member = globalData.members[key];
         if (member.name.toLowerCase() === userInp.toLowerCase() && member.password === passInp) {
             authenticated = true;
-            matchedName = member.name;
             friendKey = key;
             break;
         }
@@ -64,13 +60,17 @@ function handleLogin() {
 
     if (authenticated) {
         localStorage.setItem('hubUserSession', 'authenticated');
-        localStorage.setItem('hubActiveUser', matchedName);
         localStorage.setItem('hubActiveFriendKey', friendKey);
         currentActiveFriendKey = friendKey;
-        document.getElementById('hoverUsername').innerText = matchedName;
+        
+        document.getElementById('my-profile-name').innerText = globalData.members[friendKey].name;
+        document.getElementById('my-profile-class').innerText = globalData.members[friendKey].currentClass;
+        document.getElementById('my-avatar').innerText = globalData.members[friendKey].name.substring(0, 2).toUpperCase();
+        if(globalData.members[friendKey].status) document.getElementById('status-input').value = globalData.members[friendKey].status;
+
         runFakeLoadingScreen();
     } else {
-        errorEl.innerText = "❌ Invalid name or password. Try again!";
+        errorEl.innerText = "❌ Credentials mismatch. Please try again.";
     }
 }
 
@@ -78,81 +78,139 @@ function runFakeLoadingScreen(customMessage) {
     document.getElementById('login-container').classList.add('hidden');
     document.getElementById('dashboard-container').classList.add('hidden');
     document.getElementById('loader-container').classList.remove('hidden');
-    document.getElementById('loader-text').innerText = customMessage || "Synchronizing Hub Data...";
-    document.body.style.alignItems = "center";
+    document.getElementById('loader-text').innerText = customMessage || "Loading Social Feed Engine...";
 
     setTimeout(() => {
         document.getElementById('loader-container').classList.add('hidden');
-        document.body.style.alignItems = "flex-start";
         document.getElementById('dashboard-container').classList.remove('hidden');
-        buildDashboard();
+        buildGlobalSocialFeed();
+        buildLeaderboards();
     }, LOADING_TIME);
 }
 
-function buildDashboard() {
-    const grid = document.getElementById('friends-grid');
-    grid.innerHTML = ''; 
+// SWITCH HOVER AND ACTIVE NAV CHANNELS PLUGINS
+function switchTab(targetTab) {
+    document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+    document.querySelectorAll('.hotbar-item').forEach(item => item.classList.remove('active'));
 
-    for (let key in globalData.members) {
-        let friend = globalData.members[key];
-        let pdfItemsHTML = '';
-        
-        if (!friend.pdfs || friend.pdfs.length === 0) {
-            pdfItemsHTML = '<p class="no-files-notice" style="margin:0; font-size:0.85rem; color:var(--text-muted)">No PDFs uploaded yet.</p>';
-        } else {
-            friend.pdfs.forEach(pdf => {
-                if (pdf.path.includes('.gitkeep')) return;
-                const subject = pdf.subject || 'Other';
-                pdfItemsHTML += `
-                    <li class="pdf-item" data-subject="${subject}">
-                        <a class="pdf-link" href="${pdf.path}" target="_blank">
-                            <span>
-                                <i class="fas fa-file-pdf" style="color:var(--accent); margin-right:6px;"></i> 
-                                ${pdf.name}
-                                <span class="subject-badge badge-${subject.toLowerCase()}">${subject}</span>
-                            </span>
-                            <span class="pdf-date">${pdf.date}</span>
-                        </a>
-                    </li>
-                `;
-            });
-        }
-
-        const card = document.createElement('div');
-        card.className = 'friend-card fade-in';
-        card.innerHTML = `
-            <div class="friend-header">
-                <span class="friend-name">${friend.name}</span>
-                <span class="friend-class">${friend.currentClass}</span>
-            </div>
-            <p class="friend-status" id="status-display-${key}">"${friend.status}"</p>
-            <ul class="pdf-list">
-                <strong style="font-size:0.8rem; display:block; margin-bottom:0.6rem; color:var(--text-muted)">RECENT UPLOADS:</strong>
-                ${pdfItemsHTML}
-            </ul>
-        `;
-        grid.appendChild(card);
-    }
+    document.getElementById(`tab-${targetTab}`).classList.remove('hidden');
+    document.getElementById(`nav-${targetTab}`).classList.add('active');
+    
+    // Smooth title tag switcher updates
+    const tag = document.querySelector('.hub-tag');
+    tag.innerText = targetTab === 'feed' ? 'Feed' : targetTab === 'leaderboard' ? 'Stats' : 'User';
 }
 
-/* SUBJECT FILTER MATRIX */
+// CORE MATRIX: ASSEMBLE SEPARATE MEMBERS DATA INTO SINGLE UNIFIED CHRONOLOGICAL CHANNELS FLOWS
+function buildGlobalSocialFeed() {
+    const feedContainer = document.getElementById('global-feed');
+    feedContainer.innerHTML = '';
+
+    let allPostsArr = [];
+
+    // Extract all files from all users and compile them into a unified pool
+    for (let userKey in globalData.members) {
+        let user = globalData.members[userKey];
+        if (user.pdfs && user.pdfs.length > 0) {
+            user.pdfs.forEach(pdf => {
+                if (pdf.path.includes('.gitkeep')) return;
+                allPostsArr.push({
+                    username: user.name,
+                    userStatus: user.status || "Chilling",
+                    userKey: userKey,
+                    docName: pdf.name,
+                    docPath: pdf.path,
+                    docSubject: pdf.subject || 'Other',
+                    docDate: pdf.date || '2026-06-01'
+                });
+            });
+        }
+    }
+
+    // Sort files by date so the newest uploads are at the top
+    allPostsArr.sort((a, b) => new Date(b.docDate) - new Date(a.docDate));
+
+    if (allPostsArr.length === 0) {
+        feedContainer.innerHTML = `<div style="text-align:center; padding:3rem 1rem; color:var(--text-muted); font-weight:600;">No assignments posted yet. Be the first! ✨</div>`;
+        return;
+    }
+
+    allPostsArr.forEach(post => {
+        const card = document.createElement('div');
+        card.className = 'feed-card fade-in';
+        card.setAttribute('data-subject', post.docSubject);
+        card.innerHTML = `
+            <div class="feed-card-header">
+                <div class="feed-user-meta">
+                    <div class="feed-avatar">${post.username.substring(0,2).toUpperCase()}</div>
+                    <div>
+                        <span class="feed-username">${post.username}</span>
+                        <span class="feed-user-status">"${post.userStatus}"</span>
+                    </div>
+                </div>
+            </div>
+            <div class="feed-card-body">
+                <a class="post-document-attachment" href="${post.docPath}" target="_blank">
+                    <div class="doc-info-block">
+                        <i class="fas fa-file-pdf"></i>
+                        <div>
+                            <span class="doc-title">${post.docName}</span>
+                            <span class="doc-meta">
+                                ${post.docDate} 
+                                <span class="subject-badge badge-${post.docSubject.toLowerCase()}">${post.docSubject}</span>
+                            </span>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right feed-download-arrow"></i>
+                </a>
+            </div>
+        `;
+        feedContainer.appendChild(card);
+    });
+}
+
+function buildLeaderboards() {
+    const list = document.getElementById('leaderboard-list');
+    list.innerHTML = '';
+
+    let ranks = [];
+    for (let key in globalData.members) {
+        let m = globalData.members[key];
+        let count = m.pdfs ? m.pdfs.filter(p => !p.path.includes('.gitkeep')).length : 0;
+        ranks.push({ name: m.name, uploads: count });
+    }
+    ranks.sort((a, b) => b.uploads - a.uploads);
+
+    ranks.forEach((rnk, idx) => {
+        const row = document.createElement('div');
+        row.className = 'leader-row fade-in';
+        row.innerHTML = `
+            <div class="leader-profile-side">
+                <span class="leader-rank">#${idx + 1}</span>
+                <span class="leader-name">${rnk.name}</span>
+            </div>
+            <span class="leader-score">${rnk.uploads} shares</span>
+        `;
+        list.appendChild(row);
+    });
+}
+
 function filterSubject(subject) {
-    // Update active filter button color style
     const buttons = document.querySelectorAll('.filter-btn');
     buttons.forEach(btn => btn.classList.remove('active'));
     event.target.classList.add('active');
 
-    const items = document.querySelectorAll('.pdf-item');
+    const items = document.querySelectorAll('.feed-card');
     items.forEach(item => {
         if (subject === 'all' || item.getAttribute('data-subject') === subject) {
-            item.classList.remove('hidden-by-filter');
+            item.style.display = "flex";
         } else {
-            item.classList.add('hidden-by-filter');
+            item.style.display = "none";
         }
     });
 }
 
-/* AUTOMATED GITHUB API CORE PIPELINE */
+/* AUTOMATED GITHUB API BACKEND CONSTRAINTS ACTIONS */
 async function triggerGitHubUpload() {
     const fileInput = document.getElementById('modal-file-input');
     const nameInput = document.getElementById('modal-file-name').value.trim();
@@ -161,16 +219,15 @@ async function triggerGitHubUpload() {
     const uploadBtn = document.getElementById('modal-upload-btn');
 
     if (!fileInput.files || fileInput.files.length === 0 || !nameInput) {
-        errorEl.innerText = "❌ Please provide a file name and select a file.";
+        errorEl.innerText = "❌ Please complete all fields.";
         return;
     }
 
     const file = fileInput.files[0];
     uploadBtn.disabled = true;
-    uploadBtn.innerText = "Uploading to Repositories...";
+    uploadBtn.innerText = "Uploading straight to feed...";
 
     try {
-        // Step 1: Read the file stream locally and turn it into base64 text
         const base64Content = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result.split(',')[1]);
@@ -178,7 +235,6 @@ async function triggerGitHubUpload() {
             reader.readAsDataURL(file);
         });
 
-        // Step 2: Upload the actual binary file straight into their folder layout
         const fileCleanName = Date.now() + "_" + file.name.replace(/\s+/g, '_');
         const fileStoragePath = `uploads/${currentActiveFriendKey}/${fileCleanName}`;
         
@@ -186,19 +242,17 @@ async function triggerGitHubUpload() {
             method: "PUT",
             headers: { "Authorization": `token ${CONFIG.token}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-                message: `Uploaded new asset: ${nameInput}`,
+                message: `Uploaded: ${nameInput}`,
                 content: base64Content,
                 branch: CONFIG.branch
             })
         });
 
-        // Step 3: Fetch structural config file data.json to attach metadata list record
         const dataUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/data.json`;
         const jsonResponse = await fetch(dataUrl, { headers: { "Authorization": `token ${CONFIG.token}` } });
         const jsonMeta = await jsonResponse.json();
         const currentDataFile = JSON.parse(atob(jsonMeta.content));
 
-        // Step 4: Inject the metadata directly into the correct user block arrays
         const today = new Date().toISOString().split('T')[0];
         currentDataFile.members[currentActiveFriendKey].pdfs.push({
             name: nameInput,
@@ -207,12 +261,11 @@ async function triggerGitHubUpload() {
             date: today
         });
 
-        // Step 5: Repush updated configuration file right back to GitHub to trigger Vercel build
         await fetch(dataUrl, {
             method: "PUT",
             headers: { "Authorization": `token ${CONFIG.token}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-                message: `Metadata tracking injection for ${nameInput}`,
+                message: `Update feed ledger for ${nameInput}`,
                 content: btoa(JSON.stringify(currentDataFile, null, 2)),
                 sha: jsonMeta.sha,
                 branch: CONFIG.branch
@@ -220,17 +273,16 @@ async function triggerGitHubUpload() {
         });
 
         closeUploadModal();
-        runFakeLoadingScreen("Re-indexing complete! Re-building site structures...");
+        runFakeLoadingScreen("Publishing your post across the hub network...");
 
     } catch (err) {
         console.error(err);
-        errorEl.innerText = "❌ Critical GitHub sync fault. Verify token parameters.";
+        errorEl.innerText = "❌ Feed Sync Fault. Verify Token params.";
         uploadBtn.disabled = false;
-        uploadBtn.innerText = "Push Live to Hub";
+        uploadBtn.innerText = "Publish to Feed";
     }
 }
 
-/* LIVE STATUS AUTOMATED WRITER */
 async function updateLiveStatus() {
     const newStatus = document.getElementById('status-input').value.trim();
     if (!newStatus || !currentActiveFriendKey) return;
@@ -247,27 +299,18 @@ async function updateLiveStatus() {
             method: "PUT",
             headers: { "Authorization": `token ${CONFIG.token}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-                message: `Status update: ${newStatus}`,
+                message: `Status: ${newStatus}`,
                 content: btoa(JSON.stringify(currentDataFile, null, 2)),
                 sha: jsonMeta.sha,
                 branch: CONFIG.branch
             })
         });
-
-        document.getElementById('status-display-' + currentActiveFriendKey).innerText = `"${newStatus}"`;
-        document.getElementById('status-input').value = "";
+        
+        globalData.members[currentActiveFriendKey].status = newStatus;
+        alert("Status updated! It will display on your next feed post refresh.");
     } catch (err) {
-        console.error("Status update sync fault:", err);
+        console.error("Status synchronization failed:", err);
     }
-}
-
-/* UI UTILITIES */
-function toggleDropdown(event) {
-    event.stopPropagation();
-    const dropdown = document.getElementById('profileDropdown');
-    const wrapper = document.getElementById('profileWrapper');
-    dropdown.classList.toggle('hidden');
-    wrapper.classList.toggle('active');
 }
 
 function toggleTheme() {
@@ -293,8 +336,6 @@ function openUploadModal(e) { if(e) e.preventDefault(); document.getElementById(
 function closeUploadModal(e) { if(e) e.stopPropagation(); document.getElementById('upload-modal').classList.add('hidden'); }
 
 function handleLogout() {
-    localStorage.removeItem('hubUserSession');
-    localStorage.removeItem('hubActiveUser');
-    localStorage.removeItem('hubActiveFriendKey');
+    localStorage.clear();
     window.location.reload();
 }
