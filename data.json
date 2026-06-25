@@ -23,10 +23,19 @@
         },
         {
           "name": "Holiday homework",
-          "path": "uploads/neyansh/1782407468014_CLASS_–_VII_(2025_–_2026).pdf",
+          "path": "uploads/neyansh/1782407468014_CLASS_â_VII_(2025_â_2026).pdf",
           "subject": "Other",
           "date": "2026-06-25",
           "metaInfo": "",
+          "isImageSet": false,
+          "imagePayloads": []
+        },
+        {
+          "name": "Holiday homework",
+          "path": "uploads/neyansh/1782407508024_CLASS_–_VII_(2025_–_2026).pdf",
+          "subject": "Other",
+          "date": "2026-06-25",
+          "metaInfo": "VII holiday homework",
           "isImageSet": false,
           "imagePayloads": []
         }
