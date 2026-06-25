@@ -105,7 +105,7 @@ function runFakeLoadingScreen(customMessage) {
     document.getElementById('login-container').classList.add('hidden');
     document.getElementById('dashboard-container').classList.add('hidden');
     document.getElementById('loader-container').classList.remove('hidden');
-    document.getElementById('loader-text').innerText = customMessage || "Synchronizing Hub Data...";
+    document.getElementById('loader-text').innerText = customMessage || "Synchronizing limedu Data...";
 
     setTimeout(() => {
         document.getElementById('loader-container').classList.add('hidden');
@@ -193,6 +193,13 @@ function handleSubjectChange() {
                 <label>Worksheet Number Modifier <span style="font-weight:normal; color:var(--text-muted);">(Optional Number)</span></label>
                 <input type="number" id="math-worksheet-input" min="1" placeholder="e.g., 1 (Leaves blank if standard copy work)">
             </div>`;
+    }
+    else if (subject === 'Other') {
+    wrapper.innerHTML = `
+        <div class="input-group fade-in">
+            <label>Custom Category Label</label>
+            <input type="text" id="sub-category-select" placeholder="e.g., General, Project File, Notice">
+        </div>`;
     }
 }
 

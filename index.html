@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>limedu Hub</title>
+    <title>LimeDU Crew</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -16,10 +16,10 @@
 
     <div id="login-container" class="login-wrapper fade-in">
         <div class="card">
-            <h2>🎒 limedu Crew Login</h2>
-            <p>Connect with your hub workspace</p>
+            <h2>Lime Crew</h2>
+            <p>Login and access the crew's workspace</p>
             <div class="input-group">
-                <input type="text" id="username" placeholder="Your Name (e.g. Kriz)" required>
+                <input type="text" id="username" placeholder="Your Name (e.g. Galla Mohit Sai)" required>
             </div>
             <div class="input-group">
                 <input type="password" id="password" placeholder="Password" required>
@@ -32,7 +32,7 @@
     <div id="dashboard-container" class="hidden">
         <header class="app-top-bar">
             <div class="brand">
-                <h1 id="hub-title">limedu Hub</h1>
+                <h1 id="hub-title">LimeDU Workspace</h1>
                 <span class="hub-tag">Feed</span>
             </div>
             <button id="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">
@@ -40,18 +40,20 @@
             </button>
         </header>
 
-        <div id="tab-feed" class="tab-panel active">
-            <div class="filter-bar-container">
-                <div class="filter-bar">
-                    <button class="filter-btn active" onclick="filterSubject('all')">All Subjects</button>
-                    <button class="filter-btn" onclick="filterSubject('Science')">Science</button>
-                    <button class="filter-btn" onclick="filterSubject('English')">English</button>
-                    <button class="filter-btn" onclick="filterSubject('Social Science')">Social Science</button>
-                    <button class="filter-btn" onclick="filterSubject('Hindi')">Hindi</button>
-                    <button class="filter-btn" onclick="filterSubject('Maths')">Maths</button>
-                    <button class="filter-btn" onclick="filterSubject('Sanskrit')">Sanskrit</button>
-                </div>
+                <!-- SUBJECT FILTERS -->
+        <div class="filter-bar-container">
+            <div class="filter-bar">
+                <button class="filter-btn active" onclick="filterSubject('all')">All Subjects</button>
+                <button class="filter-btn" onclick="filterSubject('Science')">Science</button>
+                <button class="filter-btn" onclick="filterSubject('English')">English</button>
+                <button class="filter-btn" onclick="filterSubject('Social Science')">Social Science</button>
+                <button class="filter-btn" onclick="filterSubject('Hindi')">Hindi</button>
+                <button class="filter-btn" onclick="filterSubject('Maths')">Maths</button>
+                <button class="filter-btn" onclick="filterSubject('Sanskrit')">Sanskrit</button>
+                <!-- SEPARATE OTHERS FILTER -->
+                <button class="filter-btn" onclick="filterSubject('Other')">Other</button>
             </div>
+        </div>
             
             <div id="global-feed" class="social-feed">
                 </div>
@@ -153,6 +155,7 @@
                         <option value="Hindi">Hindi</option>
                         <option value="Maths">Maths</option>
                         <option value="Sanskrit">Sanskrit</option>
+                        <option value="Other">Other</option>
                     </select>
                 </div>
 
