@@ -3,23 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>6B Survivors</title>
+    <title>limedu Hub</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="light-mode">
 
-    <!-- LOADING SCREEN -->
     <div id="loader-container" class="hidden">
         <div class="spinner"></div>
         <p class="loading-text" id="loader-text">Synchronizing Hub Data...</p>
     </div>
 
-    <!-- LOGIN SCREEN -->
     <div id="login-container" class="login-wrapper fade-in">
         <div class="card">
-            <h2>🎒 6B Crew Login</h2>
-            <p>Connect with your 6B crew</p>
+            <h2>🎒 limedu Crew Login</h2>
+            <p>Connect with your hub workspace</p>
             <div class="input-group">
                 <input type="text" id="username" placeholder="Your Name (e.g. Kriz)" required>
             </div>
@@ -31,12 +29,10 @@
         </div>
     </div>
 
-    <!-- MAIN APP INTERFACE -->
     <div id="dashboard-container" class="hidden">
-        <!-- TOP APP BAR -->
         <header class="app-top-bar">
             <div class="brand">
-                <h1 id="hub-title">6B Hub</h1>
+                <h1 id="hub-title">limedu Hub</h1>
                 <span class="hub-tag">Feed</span>
             </div>
             <button id="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">
@@ -44,44 +40,53 @@
             </button>
         </header>
 
-        <!-- FEED TAB (PANEL 1) -->
         <div id="tab-feed" class="tab-panel active">
-            <!-- SUBJECT FILTERS -->
             <div class="filter-bar-container">
                 <div class="filter-bar">
                     <button class="filter-btn active" onclick="filterSubject('all')">All Subjects</button>
-                    <button class="filter-btn" onclick="filterSubject('Math')">Math</button>
                     <button class="filter-btn" onclick="filterSubject('Science')">Science</button>
                     <button class="filter-btn" onclick="filterSubject('English')">English</button>
-                    <button class="filter-btn" onclick="filterSubject('History')">History</button>
+                    <button class="filter-btn" onclick="filterSubject('Social Science')">Social Science</button>
+                    <button class="filter-btn" onclick="filterSubject('Hindi')">Hindi</button>
+                    <button class="filter-btn" onclick="filterSubject('Maths')">Maths</button>
+                    <button class="filter-btn" onclick="filterSubject('Sanskrit')">Sanskrit</button>
                 </div>
             </div>
             
-            <!-- THE SOCIAL FEED -->
             <div id="global-feed" class="social-feed">
-                <!-- Feed items render dynamically here -->
-            </div>
+                </div>
         </div>
 
-        <!-- LEADERBOARD TAB (PANEL 2) -->
         <div id="tab-leaderboard" class="tab-panel hidden">
             <div class="panel-header">
                 <h2>🏆 Hub Analytics</h2>
                 <p>Who is carrying the crew storage?</p>
             </div>
             <div id="leaderboard-list" class="leaderboard-container">
-                <!-- Rank stats here -->
+                </div>
+        </div>
+
+        <div id="tab-notes" class="tab-panel hidden">
+            <div class="panel-header">
+                <h2>📝 Shared Workspace Notes</h2>
+                <p>Quick memos, links, and updates for the group</p>
+            </div>
+            <div class="notes-container">
+                <div class="feed-card">
+                    <div class="feed-card-header">
+                        <span class="feed-username">Notice Board</span>
+                    </div>
+                    <p style="font-size:0.95rem; line-height:1.4; color:var(--text-main);"> Welcome to the upgraded workspace. Use the central publish tool to instantly share multi-image configurations or document assignments directly categorized by chapters and book pages.</p>
+                </div>
             </div>
         </div>
 
-        <!-- MY PROFILE TAB (PANEL 3) -->
         <div id="tab-profile" class="tab-panel hidden">
             <div class="profile-hero-card">
-                <div class="avatar-large" id="my-avatar">6B</div>
+                <div class="avatar-large" id="my-avatar">LH</div>
                 <h2 id="my-profile-name">Student Profile</h2>
-                <span class="profile-class-badge" id="my-profile-class">Class 7</span>
+                <span class="profile-class-badge" id="my-profile-class">Class Monitor</span>
                 
-                <!-- LIVE STATUS EDITING BOX -->
                 <div class="status-box-v2">
                     <p class="current-status-lbl">Your Current Status:</p>
                     <div class="status-input-row">
@@ -94,64 +99,73 @@
             </div>
         </div>
 
-        <!-- PERMANENTLY LOCKED BOTTOM HOTBAR -->
         <nav class="bottom-hotbar">
-            <button class="hotbar-item active" onclick="switchTab('feed')" id="nav-feed">
-                <i class="fas fa-home"></i>
-                <span>Feed</span>
-            </button>
-            <button class="hotbar-item" onclick="switchTab('leaderboard')" id="nav-leaderboard">
-                <i class="fas fa-chart-bar"></i>
-                <span>Stats</span>
-            </button>
+            <div class="hotbar-left-block">
+                <button class="hotbar-item active" onclick="switchTab('feed')" id="nav-feed">
+                    <i class="fas fa-home"></i>
+                    <span>Feed</span>
+                </button>
+                <button class="hotbar-item" onclick="switchTab('leaderboard')" id="nav-leaderboard">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Stats</span>
+                </button>
+            </div>
             
-            <!-- CENTRAL UPLOAD TRIGGER BUTTON -->
             <div class="hotbar-center-publish">
                 <button class="hotbar-plus-btn" onclick="openUploadModal(event)">
                     <i class="fas fa-plus"></i>
                 </button>
             </div>
             
-            <div class="hotbar-spacer"></div> <!-- Spacer to balancing center button layout -->
-            
-            <button class="hotbar-item" onclick="switchTab('profile')" id="nav-profile">
-                <i class="fas fa-user"></i>
-                <span>Profile</span>
-            </button>
+            <div class="hotbar-right-block">
+                <button class="hotbar-item" onclick="switchTab('notes')" id="nav-notes">
+                    <i class="fas fa-book-open"></i>
+                    <span>Notes</span>
+                </button>
+                <button class="hotbar-item" onclick="switchTab('profile')" id="nav-profile">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </button>
+            </div>
         </nav>
     </div>
 
-    <!-- POP-UP UPLOAD DRAWER MODAL -->
     <div id="upload-modal" class="modal-overlay hidden" onclick="closeUploadModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-drag-handle"></div>
             <div class="modal-header">
-                <h3><i class="fas fa-plus-circle"></i> Publish New PDF</h3>
+                <h3><i class="fas fa-plus-circle"></i> Publish Entry</h3>
                 <button class="close-modal-btn" onclick="closeUploadModal()">&times;</button>
             </div>
             
             <div class="modal-body">
                 <div class="input-group">
                     <label>Assignment Display Name</label>
-                    <input type="text" id="modal-file-name" placeholder="e.g., Chapter 4 Quiz Review">
+                    <input type="text" id="modal-file-name" placeholder="e.g., Assignment Copy Work">
                 </div>
+
                 <div class="input-group">
                     <label>Subject Category</label>
-                    <select id="modal-file-subject">
-                        <option value="Math">Math</option>
+                    <select id="modal-file-subject" onchange="handleSubjectChange()">
                         <option value="Science">Science</option>
                         <option value="English">English</option>
-                        <option value="History">History</option>
-                        <option value="Other">Other</option>
+                        <option value="Social Science">Social Science</option>
+                        <option value="Hindi">Hindi</option>
+                        <option value="Maths">Maths</option>
+                        <option value="Sanskrit">Sanskrit</option>
                     </select>
                 </div>
+
+                <div id="dynamic-subcategories-wrapper"></div>
+
                 <div class="input-group">
                     <label class="file-dropzone">
-                        <i class="fas fa-file-pdf"></i>
-                        <span id="file-chosen-text">Select Document File</span>
-                        <input type="file" id="modal-file-input" onchange="updateFileLabel()" style="display:none;">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span id="file-chosen-text">Upload PDF or Multiple Images</span>
+                        <input type="file" id="modal-file-input" onchange="updateFileLabel()" accept="application/pdf, image/*" multiple style="display:none;">
                     </label>
                 </div>
+
                 <button id="modal-upload-btn" onclick="triggerGitHubUpload()">Publish to Feed</button>
                 <p id="upload-error" class="error-msg" style="text-align:center;"></p>
             </div>

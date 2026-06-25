@@ -32,23 +32,21 @@ body.dark-mode {
     -webkit-tap-highlight-color: transparent;
 }
 
-/* ANTI SIDE-BY-SIDE INTERFACE BREAK-RIGS */
 body {
     background-color: var(--bg-color);
     color: var(--text-main);
     height: 100vh;
     width: 100vw;
-    overflow: hidden; /* Lock native page rubber banding */
+    overflow: hidden; 
     display: flex;
-    flex-direction: column; /* Force elements to stack vertically instead of side-by-side */
+    flex-direction: column; 
     justify-content: center;
     align-items: center;
 }
 
-/* FIXED CONTAINER RUNNING FULLSCREEN VIEWPORTS */
 #dashboard-container {
     width: 100%;
-    max-width: 500px; /* Looks like a perfect mobile device even on desktops */
+    max-width: 500px; 
     height: 100%;
     background: var(--bg-color);
     display: flex;
@@ -64,7 +62,6 @@ body {
     padding: 1.5rem; 
 }
 
-/* AUTHENTICATION CARD DESIGN */
 .card {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -103,6 +100,23 @@ input:focus, select:focus {
     border-color: var(--accent);
 }
 
+.inline-range-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0.25rem;
+}
+.inline-range-box input {
+    text-align: center;
+}
+.input-tip {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+    display: block;
+}
+
 button {
     width: 100%;
     padding: 0.85rem;
@@ -118,7 +132,7 @@ button {
 button:hover { background: var(--accent-hover); }
 .error-msg { color: var(--error); font-size: 0.85rem; margin-top: 0.75rem; font-weight: 600; }
 
-/* FIX FOR WOBBLY DISINTEGRATED BLUR CONTROLS */
+/* RE-ENGINEERED BLUR LOADING SCREEN PACK */
 #loader-container {
     position: fixed;
     top: 0; left: 0;
@@ -130,12 +144,9 @@ button:hover { background: var(--accent-hover); }
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 99999; /* Forces loading panel over everything else */
+    z-index: 99999; 
 }
-
-body.dark-mode #loader-container {
-    background: rgba(11, 12, 16, 0.6);
-}
+body.dark-mode #loader-container { background: rgba(11, 12, 16, 0.6); }
 
 .spinner {
     width: 40px;
@@ -149,7 +160,6 @@ body.dark-mode #loader-container {
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .loading-text { font-weight: 700; color: var(--text-main); }
 
-/* TOP STICKY HEADER BANNER */
 .app-top-bar {
     display: flex;
     justify-content: space-between;
@@ -168,71 +178,95 @@ body.dark-mode #loader-container {
     border-radius: 50%; color: var(--text-main); display: flex; justify-content: center; align-items: center; cursor: pointer;
 }
 
-/* MOBILE SYSTEM TAB VIEW SYSTEM */
 .tab-panel {
     flex: 1;
-    overflow-y: auto; /* Allow independent panel vertical scroll feeds */
-    padding: 1rem 1.25rem 6.5rem 1.25rem; /* Large bottom clearance buffer to prevent hotbar overlaying items */
+    overflow-y: auto; 
+    padding: 1rem 1.25rem 6.5rem 1.25rem; 
     scrollbar-width: none;
 }
 .tab-panel::-webkit-scrollbar { display: none; }
+.hidden { display: none !important; }
 
-/* HARD CONSTRAINT OVERRIDE ENSURING INACTIVE COMPONENTS CLEAR OUT */
-.hidden { 
-    display: none !important; 
-}
-
-/* PERMANENTLY LOCKED SOCIAL HOTBAR ENGINE */
+/* FIX HITBOX COLLISIONS AND SPACE DISTRIBUTIONS */
 .bottom-hotbar {
     position: absolute;
     bottom: 0; left: 0; right: 0;
-    height: 72px;
+    height: 76px;
     background: var(--hotbar-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-top: 1px solid var(--border-color);
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr; 
+    align-items: center;
+    padding: 0 0.25rem;
+    z-index: 999;
+}
+
+.hotbar-left-block, .hotbar-right-block {
     display: flex;
     justify-content: space-around;
-    align-items: center;
-    padding: 0 0.5rem;
-    z-index: 999;
+    width: 100%;
+    height: 100%;
 }
 
 .hotbar-item {
     background: transparent; border: none;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    color: var(--text-muted); width: 60px; height: 100%;
-    gap: 4px; font-size: 0.75rem; font-weight: 700; transition: color 0.2s ease;
+    color: var(--text-muted); width: 100%; height: 100%;
+    gap: 4px; font-size: 0.72rem; font-weight: 700; transition: color 0.2s ease;
 }
-.hotbar-item i { font-size: 1.3rem; transition: transform 0.25s var(--transition-curve); }
+.hotbar-item i { font-size: 1.25rem; transition: transform 0.25s var(--transition-curve); }
 .hotbar-item.active { color: var(--text-main); }
 .hotbar-item.active i { transform: translateY(-2px) scale(1.05); color: var(--accent); }
 
-/* CENTRAL PLUS LAYOUT TRIGGER */
 .hotbar-center-publish {
-    position: absolute;
-    left: 50%;
-    top: -20px;
-    transform: translateX(-50%);
-    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    height: 100%;
 }
 .hotbar-plus-btn {
-    width: 58px; height: 58px;
+    width: 54px; height: 54px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--accent), #ff758f);
     color: #fff; border: 4px solid var(--bg-color);
-    font-size: 1.4rem; display: flex; justify-content: center; align-items: center;
-    box-shadow: 0 8px 20px rgba(230, 57, 70, 0.35);
+    font-size: 1.3rem; display: flex; justify-content: center; align-items: center;
+    box-shadow: 0 6px 16px rgba(230, 57, 70, 0.3);
     transition: transform 0.25s var(--transition-curve);
+    transform: translateY(-14px); /* Float nicely above the bottom segment grid */
 }
 body.dark-mode .hotbar-plus-btn { border-color: #0b0c10; }
-.hotbar-plus-btn:hover { transform: scale(1.1); }
-.hotbar-plus-btn:active { transform: scale(0.95); }
-.hotbar-spacer { width: 50px; }
+.hotbar-plus-btn:hover { transform: translateY(-14px) scale(1.1); }
+.hotbar-plus-btn:active { transform: translateY(-14px) scale(0.95); }
 
-/* INSTAGRAM STYLE SOCIAL FEED CARDS */
+/* HORIZONTAL SUBJECT BAR SCROLL (CROSS PLATFORM / DESKTOP SECURE) */
+.filter-bar-container { 
+    width: 100%; 
+    overflow-x: auto; 
+    margin-bottom: 1.25rem; 
+    margin-top: 0.25rem;
+    scrollbar-width: none; 
+    -ms-overflow-style: none;
+    cursor: grab;
+}
+.filter-bar-container::-webkit-scrollbar { display: none; }
+.filter-bar { 
+    display: flex; 
+    gap: 0.6rem; 
+    white-space: nowrap;
+    padding-bottom: 2px;
+}
+.filter-btn {
+    display: inline-block;
+    width: auto; padding: 0.55rem 1.15rem; background: var(--card-bg);
+    color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 20px; font-size: 0.85rem; font-weight: 700;
+}
+.filter-btn.active { background: var(--text-main); color: var(--card-bg); border-color: var(--text-main); }
+
+/* FEED CARDS DESIGN INTERFACES */
 .social-feed { display: flex; flex-direction: column; gap: 1.25rem; }
-
 .feed-card {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -242,7 +276,6 @@ body.dark-mode .hotbar-plus-btn { border-color: #0b0c10; }
     flex-direction: column;
     box-shadow: 0 4px 12px rgba(0,0,0,0.01);
 }
-
 .feed-card-header {
     display: flex;
     justify-content: space-between;
@@ -264,7 +297,6 @@ body.dark-mode .hotbar-plus-btn { border-color: #0b0c10; }
 
 .feed-card-body { margin-bottom: 0.5rem; }
 
-/* THE INSTAGRAM 'POST CONTENT CONTAINER' */
 .post-document-attachment {
     display: flex;
     align-items: center;
@@ -278,40 +310,41 @@ body.dark-mode .hotbar-plus-btn { border-color: #0b0c10; }
     transition: all 0.2s ease;
 }
 .post-document-attachment:hover { border-color: var(--accent); background: var(--accent-light); }
-
 .doc-info-block { display: flex; align-items: center; gap: 12px; }
 .doc-info-block i { font-size: 1.75rem; color: var(--accent); }
 .doc-title { font-weight: 700; font-size: 0.95rem; display: block; margin-bottom: 2px; }
-.doc-meta { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.doc-meta { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; }
 
-/* SUBJECT PILL BADGES */
-.subject-badge {
+/* MULTIPLE IMAGE GRID/CAROUSEL CARDS */
+.image-gallery-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 0.5rem;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.gallery-img-item {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    cursor: zoom-in;
+    transition: transform 0.2s ease;
+}
+.gallery-img-item:hover { transform: scale(1.02); }
+
+.subject-tag-badge {
     font-size: 0.7rem;
     padding: 0.15rem 0.4rem;
     border-radius: 6px;
     font-weight: 700;
     text-transform: uppercase;
+    background: var(--accent-light);
+    color: var(--accent);
 }
-.badge-math { background: #e0f2fe; color: #0369a1; }
-.badge-science { background: #dcfce7; color: #15803d; }
-.badge-english { background: #fef3c7; color: #b45309; }
-.badge-history { background: #f3e8ff; color: #6b21a8; }
-.badge-other { background: #e5e7eb; color: #374151; }
 
-.feed-download-arrow { font-size: 1.1rem; color: var(--text-muted); transition: transform 0.2s ease; }
-.post-document-attachment:hover .feed-download-arrow { color: var(--accent); transform: translateX(2px); }
-
-/* HORIZONTAL SCROLL SUB-FILTERS TRACK */
-.filter-bar-container { width: 100%; overflow-x: auto; margin-bottom: 1.25rem; scrollbar-width: none; margin-top: 0.25rem; }
-.filter-bar-container::-webkit-scrollbar { display: none; }
-.filter-bar { display: flex; gap: 0.5rem; }
-.filter-btn {
-    width: auto; padding: 0.5rem 1.1rem; background: var(--card-bg);
-    color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 20px; font-size: 0.85rem; font-weight: 700; white-space: nowrap;
-}
-.filter-btn.active { background: var(--text-main); color: var(--card-bg); border-color: var(--text-main); }
-
-/* ANALYTICS PROFILE TAB DESIGN SHIFTS */
 .panel-header { text-align: left; margin-bottom: 1.5rem; margin-top: 0.5rem; }
 .panel-header h2 { font-weight: 800; font-size: 1.6rem; }
 .panel-header p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
@@ -323,7 +356,7 @@ body.dark-mode .hotbar-plus-btn { border-color: #0b0c10; }
 }
 .leader-profile-side { display: flex; align-items: center; gap: 12px; }
 .leader-rank { font-weight: 800; color: var(--text-muted); font-size: 1.1rem; width: 20px; }
-.leader-row:nth-child(1) .leader-rank { color: #f59e0b; } /* Gold Medal Row */
+.leader-row:nth-child(1) .leader-rank { color: #f59e0b; }
 .leader-name { font-weight: 700; font-size: 1rem; }
 .leader-score { font-weight: 800; background: var(--bg-color); padding: 0.35rem 0.75rem; border-radius: 8px; font-size: 0.85rem; color: var(--accent); }
 
@@ -345,9 +378,9 @@ body.dark-mode .profile-class-badge { background: rgba(255,255,255,0.05); }
 .status-input-row button { width: 40px; height: 40px; padding: 0; display: flex; justify-content: center; align-items: center; border-radius: 10px; }
 
 .logout-btn-v2 { background: transparent; border: 1px solid var(--border-color); color: var(--error); font-size: 0.95rem; }
-.logout-btn-v2:hover { background: rgba(239, 68, 68, 0.08); border-color: transparent; box-shadow: none; transform: none; }
+.logout-btn-v2:hover { background: rgba(239, 68, 68, 0.08); border-color: transparent; }
 
-/* BOTTOM SHEET UPLOAD MODAL PANELS */
+/* MODALS DRAWER STYLINGS */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: flex-end; z-index: 9999; animation: overlayFade 0.2s ease forwards; }
 .modal-content {
     background: var(--card-bg); border-radius: 28px 28px 0 0; padding: 1.75rem; width: 100%; max-width: 500px;
@@ -355,17 +388,15 @@ body.dark-mode .profile-class-badge { background: rgba(255,255,255,0.05); }
     transform: translateY(100%); animation: modalSlideUp 0.3s var(--transition-curve) forwards;
 }
 .modal-drag-handle { width: 40px; height: 5px; background: var(--border-color); border-radius: 3px; margin: -0.5rem auto 1.25rem auto; }
-
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
 .modal-header h3 { font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 8px; }
 .close-modal-btn { background: transparent; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; width: auto; padding: 0; }
 
 .file-dropzone { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 1.5rem; background: var(--bg-color); border: 2px dashed var(--border-color); border-radius: 14px; cursor: pointer; font-weight: 700; font-size: 0.9rem; text-align: center; }
 .file-dropzone i { font-size: 2rem; color: var(--text-muted); }
 
-/* ANIMATIONS TRACK */
+/* SYSTEM ENGINE ANIMATIONS */
 .fade-in { animation: fadeIn 0.35s cubic-bezier(0.215, 0.610, 0.355, 1) forwards; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
 @keyframes overlayFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modalSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
