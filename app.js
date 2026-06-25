@@ -1,8 +1,8 @@
 // CONFIGURATION ENGINE
 const CONFIG = {
     token: "ghp_sKPUwvkrU5gaNptsB81I" + "jaTsm5Dim22jyvEe", // Broken up to bypass safety scans
-    owner: "krizzster",       // <-- Enter your real GitHub username!
-    repo: "educ",              // <-- Enter your repo name!
+    owner: "krizzster",       
+    repo: "limedu",              // <-- Permanently updated from educ to limedu!
     branch: "main"
 };
 
@@ -88,7 +88,6 @@ function runFakeLoadingScreen(customMessage) {
     }, LOADING_TIME);
 }
 
-// SWITCH HOVER AND ACTIVE NAV CHANNELS PLUGINS
 function switchTab(targetTab) {
     document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
     document.querySelectorAll('.hotbar-item').forEach(item => item.classList.remove('active'));
@@ -96,19 +95,16 @@ function switchTab(targetTab) {
     document.getElementById(`tab-${targetTab}`).classList.remove('hidden');
     document.getElementById(`nav-${targetTab}`).classList.add('active');
     
-    // Smooth title tag switcher updates
     const tag = document.querySelector('.hub-tag');
     tag.innerText = targetTab === 'feed' ? 'Feed' : targetTab === 'leaderboard' ? 'Stats' : 'User';
 }
 
-// CORE MATRIX: ASSEMBLE SEPARATE MEMBERS DATA INTO SINGLE UNIFIED CHRONOLOGICAL CHANNELS FLOWS
 function buildGlobalSocialFeed() {
     const feedContainer = document.getElementById('global-feed');
     feedContainer.innerHTML = '';
 
     let allPostsArr = [];
 
-    // Extract all files from all users and compile them into a unified pool
     for (let userKey in globalData.members) {
         let user = globalData.members[userKey];
         if (user.pdfs && user.pdfs.length > 0) {
@@ -127,7 +123,6 @@ function buildGlobalSocialFeed() {
         }
     }
 
-    // Sort files by date so the newest uploads are at the top
     allPostsArr.sort((a, b) => new Date(b.docDate) - new Date(a.docDate));
 
     if (allPostsArr.length === 0) {
@@ -210,7 +205,6 @@ function filterSubject(subject) {
     });
 }
 
-/* AUTOMATED GITHUB API BACKEND CONSTRAINTS ACTIONS */
 async function triggerGitHubUpload() {
     const fileInput = document.getElementById('modal-file-input');
     const nameInput = document.getElementById('modal-file-name').value.trim();
