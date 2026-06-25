@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LimeDU Crew</title>
+    <title>limedu</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,13 +11,13 @@
 
     <div id="loader-container" class="hidden">
         <div class="spinner"></div>
-        <p class="loading-text" id="loader-text">Synchronizing Hub Data...</p>
+        <p class="loading-text" id="loader-text">Synchronizing limedu Data...</p>
     </div>
 
     <div id="login-container" class="login-wrapper fade-in">
         <div class="card">
-            <h2>Lime Crew</h2>
-            <p>Login and access the crew's workspace</p>
+            <h2>🎒 limedu Crew Login</h2>
+            <p>Connect with your hub workspace</p>
             <div class="input-group">
                 <input type="text" id="username" placeholder="Your Name (e.g. Galla Mohit Sai)" required>
             </div>
@@ -30,9 +30,10 @@
     </div>
 
     <div id="dashboard-container" class="hidden">
+        
         <header class="app-top-bar">
             <div class="brand">
-                <h1 id="hub-title">LimeDU Workspace</h1>
+                <h1 id="hub-title">limedu</h1>
                 <span class="hub-tag">Feed</span>
             </div>
             <button id="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">
@@ -40,23 +41,21 @@
             </button>
         </header>
 
-                <!-- SUBJECT FILTERS -->
-        <div class="filter-bar-container">
-            <div class="filter-bar">
-                <button class="filter-btn active" onclick="filterSubject('all')">All Subjects</button>
-                <button class="filter-btn" onclick="filterSubject('Science')">Science</button>
-                <button class="filter-btn" onclick="filterSubject('English')">English</button>
-                <button class="filter-btn" onclick="filterSubject('Social Science')">Social Science</button>
-                <button class="filter-btn" onclick="filterSubject('Hindi')">Hindi</button>
-                <button class="filter-btn" onclick="filterSubject('Maths')">Maths</button>
-                <button class="filter-btn" onclick="filterSubject('Sanskrit')">Sanskrit</button>
-                <!-- SEPARATE OTHERS FILTER -->
-                <button class="filter-btn" onclick="filterSubject('Other')">Other</button>
-            </div>
-        </div>
-            
-            <div id="global-feed" class="social-feed">
+        <div id="tab-feed" class="tab-panel">
+            <div class="filter-bar-container">
+                <div class="filter-bar">
+                    <button class="filter-btn active" onclick="filterSubject('all')">All Subjects</button>
+                    <button class="filter-btn" onclick="filterSubject('Science')">Science</button>
+                    <button class="filter-btn" onclick="filterSubject('English')">English</button>
+                    <button class="filter-btn" onclick="filterSubject('Social Science')">Social Science</button>
+                    <button class="filter-btn" onclick="filterSubject('Hindi')">Hindi</button>
+                    <button class="filter-btn" onclick="filterSubject('Maths')">Maths</button>
+                    <button class="filter-btn" onclick="filterSubject('Sanskrit')">Sanskrit</button>
+                    <button class="filter-btn" onclick="filterSubject('Other')">Other</button>
                 </div>
+            </div>
+            
+            <div id="global-feed" class="social-feed"></div>
         </div>
 
         <div id="tab-leaderboard" class="tab-panel hidden">
@@ -64,8 +63,7 @@
                 <h2>🏆 Hub Analytics</h2>
                 <p>Who is carrying the crew storage?</p>
             </div>
-            <div id="leaderboard-list" class="leaderboard-container">
-                </div>
+            <div id="leaderboard-list" class="leaderboard-container"></div>
         </div>
 
         <div id="tab-notes" class="tab-panel hidden">
@@ -78,7 +76,7 @@
                     <div class="feed-card-header">
                         <span class="feed-username">Notice Board</span>
                     </div>
-                    <p style="font-size:0.95rem; line-height:1.4; color:var(--text-main);"> Welcome to the upgraded workspace. Use the central publish tool to instantly share multi-image configurations or document assignments directly categorized by chapters and book pages.</p>
+                    <p style="font-size:0.95rem; line-height:1.4; color:var(--text-main);">Welcome to the upgraded workspace. Use the central publish tool to instantly share multi-image configurations or document assignments directly categorized by chapters and book pages.</p>
                 </div>
             </div>
         </div>
@@ -133,19 +131,18 @@
     </div>
 
     <div id="upload-modal" class="modal-overlay hidden" onclick="closeUploadModal(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-card fade-up-animation" onclick="event.stopPropagation()">
             <div class="modal-drag-handle"></div>
             <div class="modal-header">
-                <h3><i class="fas fa-plus-circle"></i> Publish Entry</h3>
+                <h3><i class="fas fa-file-upload" style="color:var(--accent);"></i> New Configuration</h3>
                 <button class="close-modal-btn" onclick="closeUploadModal()">&times;</button>
             </div>
             
             <div class="modal-body">
                 <div class="input-group">
                     <label>Assignment Display Name</label>
-                    <input type="text" id="modal-file-name" placeholder="e.g., Assignment Copy Work">
+                    <input type="text" id="modal-file-name" placeholder="e.g., Chapter 4 Quiz Review">
                 </div>
-
                 <div class="input-group">
                     <label>Subject Category</label>
                     <select id="modal-file-subject" onchange="handleSubjectChange()">
