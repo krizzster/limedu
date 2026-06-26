@@ -7,9 +7,9 @@ const CONFIG = {
 
 // INITIALIZE SUPABASE STORAGE & DATABASE ENGINE SECURELY
 const supabaseUrl = 'https://unjdjduiqtldgoybgmnq.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuamRqZHVpcXRsZGdveWJnbW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MzgzODEsImV4cCI6MjA5MzAxNDM4MX0.qMuQcBysiKuFD5ByoL17fs0KxClgI-FEyzyKYayNVdE';
+// Make sure to double check this matches your exact copied anon public key from Supabase Dashboard -> Settings -> API Subtab!
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuamRqcHVpcXRsZGdveWJnbW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDAsImV4cCI6MjA0MH0.YOUR_UPDATED_SIGNATURE_KEY_HERE';
 
-// Solves the double initialization namespace identifier crash safely
 let dbInstance = null;
 if (typeof window.supabase !== 'undefined') {
     dbInstance = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -17,7 +17,7 @@ if (typeof window.supabase !== 'undefined') {
 
 let globalData = {};
 let currentActiveFriendKey = ""; 
-const LOADING_TIME = 200; 
+let selectedSubjectFilter = "All";
 
 const MATHS_CHAPTERS = [
     "1. Rational Numbers", "2. Operations on Rational Numbers", "3. Rational Numbers as Decimals",
@@ -31,479 +31,225 @@ window.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('hubTheme') || 'light-mode';
     document.body.className = savedTheme;
     updateThemeToggleButton(savedTheme);
-    setupDesktopDragScroll();
-
-    document.addEventListener('click', () => {
-        document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
-    });
-
-    synchronizeDataPipeline();
+    fetchStateFromSupabase();
 });
 
-function showSpinner(text = "Processing data layer...") {
-    const loader = document.getElementById('loader-container');
-    const label = document.getElementById('loader-text');
-    if (loader && label) {
-        label.innerText = text;
-        loader.classList.remove('hidden');
-    }
-}
-
-function hideSpinner() {
-    const loader = document.getElementById('loader-container');
-    if (loader) loader.classList.add('hidden');
-}
-
-// REPLACED GITHUB FETCH WITH INSTANT SUPABASE DATABASE READ
-async function synchronizeDataPipeline() {
-    showSpinner("Synchronizing limedu Data...");
+async function fetchStateFromSupabase() {
+    toggleMainLoader(true, "Synchronizing Social Feed...");
     try {
-        if (!dbInstance) throw new Error("Supabase client is not initialized.");
-
-        const { data, error } = await dbInstance
-            .from('hub_state')
-            .select('payload')
-            .eq('id', 1)
-            .single();
-
+        const { data, error } = await dbInstance.from('hub_state').select('payload').eq('id', 1).single();
         if (error) throw error;
-        globalData = data.payload;
         
+        globalData = data.payload;
+        document.getElementById('group-title-label').innerText = globalData.groupName || "The Hub";
+        
+        // Re-authenticate if session is cached
         const cachedUser = localStorage.getItem('limeduUserKey');
-        if (cachedUser && globalData.members && globalData.members[cachedUser]) {
+        if (cachedUser && globalData.members[cachedUser]) {
             currentActiveFriendKey = cachedUser;
-            bootstrapApplicationWorkspace();
-        } else {
-            routeToAuthPortal();
+            bootSocialWorkspace();
         }
+        renderSubjectFilters();
     } catch (err) {
         console.error("Critical synchronization breakdown:", err);
-        routeToAuthPortal();
     } finally {
-        setTimeout(hideSpinner, LOADING_TIME);
+        toggleMainLoader(false);
     }
 }
 
-// REPLACED GITHUB COMMIT PROCESS WITH INSTANT SUPABASE ROW UPDATE
-async function commitToSupabaseDatabase() {
-    try {
-        if (!dbInstance) throw new Error("Supabase client is not initialized.");
+function handleLogin() {
+    const userInp = document.getElementById('username').value.trim();
+    const passInp = document.getElementById('password').value.trim();
+    const errorEl = document.getElementById('login-error');
 
-        const { error } = await dbInstance
-            .from('hub_state')
-            .update({ payload: globalData, updated_at: new Date() })
-            .eq('id', 1);
+    let matchingKey = null;
+    for (const key in globalData.members) {
+        if (globalData.members[key].name.toLowerCase() === userInp.toLowerCase()) {
+            matchingKey = key;
+            break;
+        }
+    }
 
-        if (error) throw error;
-        console.log("Supabase infrastructure synchronized seamlessly.");
-    } catch (err) {
-        console.error("Database persistence write operation failure:", err);
-        alert("Failed to synchronize application state changes securely.");
-        throw err;
+    if (matchingKey && globalData.members[matchingKey].password === passInp) {
+        currentActiveFriendKey = matchingKey;
+        localStorage.setItem('limeduUserKey', matchingKey);
+        errorEl.innerText = "";
+        bootSocialWorkspace();
+    } else {
+        errorEl.innerText = "🚨 Account key mismatch or invalid identity credentials.";
     }
 }
 
-function routeToAuthPortal() {
-    document.getElementById('login-container').classList.remove('hidden');
-    document.getElementById('app-container').classList.add('hidden');
-}
-
-function bootstrapApplicationWorkspace() {
+function bootSocialWorkspace() {
     document.getElementById('login-container').classList.add('hidden');
     document.getElementById('app-container').classList.remove('hidden');
 
     const profile = globalData.members[currentActiveFriendKey];
-    document.getElementById('current-user-display').innerText = profile.name;
+    document.getElementById('current-user-name').innerText = profile.name;
     document.getElementById('current-user-class').innerText = `Class ${profile.currentClass || '--'}`;
-    
-    const avatar = document.getElementById('user-avatar');
-    if (avatar) avatar.innerText = profile.name.charAt(0).toUpperCase();
-
-    renderFeedUI();
-    renderMembersUI();
-}
-
-function handleLogin() {
-    const userInp = document.getElementById('username').value.trim().toLowerCase();
-    const passInp = document.getElementById('password').value.trim();
-    const errEl = document.getElementById('login-error');
-
-    if (!userInp || !passInp) {
-        errEl.innerText = "Please complete all fields";
-        return;
+    document.getElementById('current-user-avatar').innerText = profile.name.charAt(0).toUpperCase();
+    if(document.getElementById('custom-status-input')) {
+        document.getElementById('custom-status-input').value = profile.status || "";
     }
 
-    let foundKey = "";
-    if (globalData.members) {
-        for (const key in globalData.members) {
-            if (globalData.members[key].name.toLowerCase() === userInp || key === userInp) {
-                foundKey = key;
-                break;
-            }
-        }
-    }
-
-    if (foundKey && globalData.members[foundKey].password === passInp) {
-        errEl.innerText = "";
-        currentActiveFriendKey = foundKey;
-        localStorage.setItem('limeduUserKey', foundKey);
-        bootstrapApplicationWorkspace();
-    } else {
-        errEl.innerText = "Invalid credentials. Verify configuration rules.";
-    }
+    renderFeedStream();
 }
 
-function handleLogout() {
-    localStorage.removeItem('limeduUserKey');
-    currentActiveFriendKey = "";
-    routeToAuthPortal();
-}
-
-function switchSection(sectName) {
-    document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.content-section').forEach(sect => sect.classList.add('hidden'));
-
-    if (sectName === 'feed') {
-        document.getElementById('section-feed').classList.remove('hidden');
-        event.currentTarget.classList.add('active');
-    } else if (sectName === 'members') {
-        document.getElementById('section-members').classList.remove('hidden');
-        event.currentTarget.classList.add('active');
-    }
-}
-
-let activeSubjectFilter = "All";
-function filterSubject(sub) {
-    activeSubjectFilter = sub;
-    const container = event.currentTarget.parentElement;
-    container.querySelectorAll('.filter-tag').forEach(b => b.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-    renderFeedUI();
-}
-
-function filterFeed() {
-    renderFeedUI();
-}
-
-function renderFeedUI() {
-    const container = document.getElementById('feed-container');
+function renderSubjectFilters() {
+    const container = document.getElementById('subject-filter-rack');
     if (!container) return;
-    container.innerHTML = "";
+    
+    const subjects = ["All", "Science", "English", "Social Science", "Hindi", "Maths", "Sanskrit", "Other"];
+    container.innerHTML = subjects.map(sub => `
+        <button class="filter-tag ${selectedSubjectFilter === sub ? 'active' : ''}" onclick="applySubjectFilter('${sub}')">
+            <i class="fas ${getSubjectIcon(sub)}"></i> ${sub}
+        </button>
+    `).join("");
+}
 
-    const query = document.getElementById('feed-search').value.toLowerCase().trim();
-    let aggregatedItems = [];
+function getSubjectIcon(sub) {
+    switch(sub) {
+        case 'Science': return 'fa-flask';
+        case 'English': return 'fa-book';
+        case 'Social Science': return 'fa-globe-americas';
+        case 'Hindi': return 'fa-language';
+        case 'Maths': return 'fa-calculator';
+        case 'Sanskrit': return 'fa-scroll';
+        default: return 'fa-folder-open';
+    }
+}
 
-    for (const authorKey in globalData.members) {
-        const mem = globalData.members[authorKey];
-        if (mem.pdfs) {
-            mem.pdfs.forEach((item, index) => {
-                aggregatedItems.push({ ...item, authorKey, authorName: mem.name, itemIndex: index });
+function applySubjectFilter(sub) {
+    selectedSubjectFilter = sub;
+    renderSubjectFilters();
+    renderFeedStream();
+}
+
+function renderFeedStream() {
+    const stream = document.getElementById('social-feed-stream');
+    if (!stream) return;
+
+    let postsPool = [];
+    for (const memberKey in globalData.members) {
+        const member = globalData.members[memberKey];
+        if (member.pdfs) {
+            member.pdfs.forEach((item, index) => {
+                postsPool.push({ ...item, authorKey: memberKey, authorName: member.name, assetIndex: index });
             });
         }
     }
 
-    aggregatedItems.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    // Sort chronologically (newest social updates top)
+    postsPool.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    aggregatedItems.forEach(item => {
-        if (activeSubjectFilter !== "All" && item.subject !== activeSubjectFilter) return;
-        if (query) {
-            const matchTitle = item.name.toLowerCase().includes(query);
-            const matchAuthor = item.authorName.toLowerCase().includes(query);
-            const matchMeta = (item.metaInfo || "").toLowerCase().includes(query);
-            if (!matchTitle && !matchAuthor && !matchMeta) return;
-        }
-
-        const card = document.createElement('div');
-        card.className = "post-card";
-
-        let previewMarkup = "";
-        if (item.isImageSet && item.imagePayloads && item.imagePayloads.length > 0) {
-            previewMarkup = `
-            <div class="post-preview-box" onclick="launchMediaTheatreCarousel(${JSON.stringify(item.imagePayloads).replace(/"/g, '&quot;')}, '${item.name.replace(/'/g, "\\'")}')">
-                <img src="${item.imagePayloads[0]}" alt="Asset Preview Frame">
-                ${item.imagePayloads.length > 1 ? `<div class="preview-counter-overlay">+${item.imagePayloads.length} Images</div>` : ""}
-            </div>`;
-        } else {
-            const cdnUrl = item.url || `${supabaseUrl}/storage/v1/object/public/limedu-storage/${item.path}`;
-            previewMarkup = `
-            <div class="post-preview-box" onclick="launchTheatreStandalonePDF('${cdnUrl}')">
-                <div class="pdf-preview-canvas-placeholder">
-                    <i class="fas fa-file-pdf"></i>
-                    <span>View Document Resource</span>
+    const searchVal = document.getElementById('global-search-bar').value.toLowerCase();
+    
+    const elementsHtml = postsPool.filter(post => {
+        const matchesSubject = selectedSubjectFilter === "All" || post.subject === selectedSubjectFilter;
+        const matchesSearch = post.name.toLowerCase().includes(searchVal) || 
+                              post.authorName.toLowerCase().includes(searchVal) ||
+                              (post.metaInfo && post.metaInfo.toLowerCase().includes(searchVal));
+        return matchesSubject && matchesSearch;
+    }).map(post => {
+        const isOwner = post.authorKey === currentActiveFriendKey;
+        return `
+            <div class="post-card animate-fade-in">
+                <div class="post-header">
+                    <div class="profile-avatar active">${post.authorName.charAt(0)}</div>
+                    <div class="post-meta-block">
+                        <div class="post-author-line">${post.authorName}</div>
+                        <div class="post-timestamp"><i class="far fa-clock"></i> ${post.date}</div>
+                    </div>
+                    ${isOwner ? `
+                    <div class="post-actions-wrapper">
+                        <button class="post-actions-trigger-btn" onclick="toggleDropdownMenu(event, '${post.authorKey}', ${post.assetIndex})">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div class="post-actions-dropdown-menu hidden" id="dropdown-${post.authorKey}-${post.assetIndex}">
+                            <button class="menu-action-btn delete" onclick="deleteAssetPipeline('${post.authorKey}', ${post.assetIndex})">
+                                <i class="far fa-trash-alt"></i> Remove Post
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
-            </div>`;
-        }
+                
+                <h2 class="post-title">${post.name}</h2>
+                <span class="subject-badge">${post.subject}</span>
+                ${post.metaInfo ? `<p class="post-desc">${post.metaInfo}</p>` : ''}
 
-        const isOwner = item.authorKey === currentActiveFriendKey;
-        const configurationMenuMarkup = isOwner ? `
-        <div class="post-actions-wrapper">
-            <button class="post-actions-trigger-btn" onclick="togglePostDropdownMenu(event)">
-                <i class="fas fa-ellipsis-v"></i>
-            </button>
-            <div class="post-actions-dropdown-menu hidden">
-                <button class="menu-action-btn delete" onclick="triggerDeletePipeline('${item.authorKey}', ${item.itemIndex}, '${item.path}')">
-                    <i class="fas fa-trash-alt"></i> Remove Post
-                </button>
-            </div>
-        </div>` : '<div></div>';
-
-        const rawDownloadUrl = item.url || `${supabaseUrl}/storage/v1/object/public/limedu-storage/${item.path}`;
-        card.innerHTML = `
-            <div class="post-header">
-                <div class="post-meta-block">
-                    <h3 class="post-title">${item.name}</h3>
-                    <span class="post-author-line">Shared by <b>${item.authorName}</b></span>
+                <div class="post-content-preview-canvas">
+                    ${post.isImageSet ? `
+                        <div class="post-preview-box" onclick="launchTheatreImageCarousel('${post.name}', ${JSON.stringify(post.imagePayloads).replace(/"/g, '&quot;')})">
+                            <img src="${post.imagePayloads[0]}" alt="Attachment preview">
+                            <div class="preview-counter-overlay"><i class="far fa-images"></i> Stack (${post.imagePayloads.length})</div>
+                        </div>
+                    ` : `
+                        <div class="post-preview-box" onclick="launchTheatreStandalonePDF('${post.path}')">
+                            <div class="pdf-preview-canvas-placeholder">
+                                <i class="fas fa-file-pdf"></i>
+                                <span>Preview Document Interface</span>
+                            </div>
+                        </div>
+                    `}
                 </div>
-                ${configurationMenuMarkup}
-            </div>
-            <div>
-                <span class="subject-badge">${item.subject}</span>
-            </div>
-            ${item.metaInfo ? `<p class="post-desc">${item.metaInfo}</p>` : ""}
-            ${previewMarkup}
-            <div class="post-footer-actions">
-                <span class="post-timestamp"><i class="far fa-calendar-alt"></i> ${item.date || 'unknown'}</span>
-                <a href="${rawDownloadUrl}" target="_blank" download class="download-action-link" onclick="event.stopPropagation()">
-                    <i class="fas fa-arrow-down"></i>
-                </a>
+
+                <div class="post-footer-actions">
+                    <a class="download-action-link" href="${post.path}" download target="_blank">
+                        <i class="fas fa-download"></i> Get File Reference
+                    </a>
+                </div>
             </div>
         `;
-        container.appendChild(card);
-    });
+    }).join("");
 
-    if (container.innerHTML === "") {
-        container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:3rem; color:var(--text-muted); font-weight:700;">No shared files uploaded yet inside this subject query.</div>`;
-    }
+    stream.innerHTML = elementsHtml || `<div style="text-align:center; padding: 3rem; color: var(--text-secondary); font-weight:700;"><i class="fas fa-mailbox-bubble" style="font-size:2rem; margin-bottom:1rem; display:block;"></i>No classroom posts match this category query yet.</div>`;
 }
 
-function togglePostDropdownMenu(e) {
+function toggleDropdownMenu(e, userKey, idx) {
     e.stopPropagation();
-    const menu = e.currentTarget.nextElementSibling;
-    const wasHidden = menu.classList.contains('hidden');
-    document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
-    if (wasHidden) menu.classList.remove('hidden');
-}
-
-// INTEGRATED ENHANCED BULK IMAGES & PDF PIPELINE STRAIGHT INTO DATABASE SAVE
-async function triggerSupabaseUploadPipeline() {
-    const nameInp = document.getElementById('modal-file-name').value.trim();
-    const subjectInp = document.getElementById('modal-file-subject').value;
-    const notesInp = document.getElementById('modal-file-notes').value.trim();
-    const fileInp = document.getElementById('modal-file-input');
-    const errEl = document.getElementById('upload-error');
-
-    if (!nameInp || !fileInp.files || fileInp.files.length === 0) {
-        errEl.innerText = "Please fill in title and load configurations.";
-        return;
-    }
-
-    errEl.innerText = "";
-    showSpinner("Uploading raw file payloads directly to storage...");
-
-    try {
-        if (!dbInstance) throw new Error("Supabase context instance disconnected.");
-        const files = Array.from(fileInp.files);
-        const isImageBundle = files.every(f => f.type.startsWith('image/')) && files.length > 0;
-
-        let finalPathReference = "";
-        let finalCdnUrl = "";
-        let packedImagesPayloads = [];
-
-        if (isImageBundle) {
-            for (const itemFile of files) {
-                const dataUrl = await convertFileToBase64(itemFile);
-                packedImagesPayloads.push(dataUrl);
-            }
-            finalPathReference = `uploads/${currentActiveFriendKey}/${Date.now()}_imgbundle.json`;
-        } else {
-            const documentFile = files[0];
-            finalPathReference = `uploads/${currentActiveFriendKey}/${Date.now()}_${documentFile.name}`;
-            
-            const { data: uploadData, error: uploadError } = await dbInstance
-                .storage
-                .from('limedu-storage')
-                .upload(finalPathReference, documentFile);
-
-            if (uploadError) throw uploadError;
-
-            const { data: publicUrlData } = dbInstance
-                .storage
-                .from('limedu-storage')
-                .getPublicUrl(finalPathReference);
-
-            finalCdnUrl = publicUrlData.publicUrl;
-        }
-
-        const payloadItem = {
-            name: nameInp,
-            path: finalPathReference,
-            url: finalCdnUrl || null,
-            subject: subjectInp,
-            date: new Date().toISOString().split('T')[0],
-            metaInfo: notesInp,
-            isImageSet: isImageBundle,
-            imagePayloads: packedImagesPayloads
-        };
-
-        if (!globalData.members[currentActiveFriendKey].pdfs) {
-            globalData.members[currentActiveFriendKey].pdfs = [];
-        }
-
-        globalData.members[currentActiveFriendKey].pdfs.unshift(payloadItem);
-
-        // Instantly save state to database
-        await commitToSupabaseDatabase();
-
-        closeUploadModal();
-        renderFeedUI();
-        alert("Published seamlessly to workspace feed! 🎉");
-    } catch (err) {
-        console.error("Pipeline breakdown:", err);
-        errEl.innerText = `Pipeline fault: ${err.message}`;
-    } finally {
-        hideSpinner();
-    }
-}
-
-function convertFileToBase64(file) {
-    return new Promise((res, rej) => {
-        const reader = new FileReader();
-        reader.onload = () => res(reader.result);
-        reader.onerror = error => rej(error);
-        reader.readAsDataURL(file);
+    const targetMenu = document.getElementById(`dropdown-${userKey}-${idx}`);
+    document.querySelectorAll('.post-actions-dropdown-menu').forEach(menu => {
+        if (menu !== targetMenu) menu.classList.add('hidden');
     });
+    if(targetMenu) targetMenu.classList.toggle('hidden');
 }
 
-// INTEGRATED PIPELINE REMOVAL INTO DATABASE
-async function triggerDeletePipeline(authorKey, index, pathReference) {
-    if (!confirm("Are you sure you want to completely discard this feed post object?")) return;
-    showSpinner("Discarding node content registry record...");
+window.addEventListener('click', () => {
+    document.querySelectorAll('.post-actions-dropdown-menu').forEach(menu => menu.classList.add('hidden'));
+});
 
+async function syncCustomStatus() {
+    const text = document.getElementById('custom-status-input').value.trim();
+    globalData.members[currentActiveFriendKey].status = text;
+    
     try {
-        if (!dbInstance) throw new Error("Supabase infrastructure missing.");
-        
-        globalData.members[authorKey].pdfs.splice(index, 1);
-
-        const isImageSet = pathReference.includes('_imgbundle.json');
-        if (!isImageSet) {
-            await dbInstance.storage.from('limedu-storage').remove([pathReference]);
-        }
-
-        await commitToSupabaseDatabase();
-        renderFeedUI();
-        alert("Post cleared successfully from cloud storage rows. ♻️");
+        await dbInstance.from('hub_state').update({ payload: globalData }).eq('id', 1);
+        alert("Status updated live on classroom board! 💬");
     } catch (err) {
-        console.error("Removal failure sequence error:", err);
-        alert(`Deletion routine errored: ${err.message}`);
-    } finally {
-        hideSpinner();
+        console.error("Status Sync Breakdown:", err);
     }
 }
 
-function renderMembersUI() {
-    const list = document.getElementById('members-list');
-    if (!list) return;
-    list.innerHTML = "";
-
-    for (const key in globalData.members) {
-        const mem = globalData.members[key];
-        const initial = mem.name.charAt(0).toUpperCase();
-        const activeClass = mem.currentClass ? `Class ${mem.currentClass}` : 'Unassigned Class Structure';
-
-        const row = document.createElement('div');
-        row.className = "member-card-row";
-        row.innerHTML = `
-            <div class="member-profile-block">
-                <div class="member-avatar-circle">${initial}</div>
-                <div class="member-detail-lines">
-                    <h4>${mem.name}</h4>
-                    <span>${activeClass}</span>
-                </div>
-            </div>
-            <div class="member-bubble-status-area">
-                <p class="status-bubble-text">${mem.status ? `"${mem.status}"` : '<i>No status update listed.</i>'}</p>
-            </div>
-        `;
-        list.appendChild(row);
-    }
-}
-
-function openStatusModal() {
-    const currentStatus = globalData.members[currentActiveFriendKey].status || "";
-    document.getElementById('modal-status-input').value = currentStatus;
-    document.getElementById('status-modal').classList.remove('hidden');
-}
-
-function closeStatusModal() {
-    document.getElementById('status-modal').classList.add('hidden');
-}
-
-// STATUS UPDATES LINKED TO DATABASE
-async function triggerStatusSyncPipeline() {
-    const text = document.getElementById('modal-status-input').value.trim();
-    showSpinner("Updating activity status record...");
-
-    try {
-        globalData.members[currentActiveFriendKey].status = text;
-        await commitToSupabaseDatabase();
-        closeStatusModal();
-        renderMembersUI();
-        alert("Status synced successfully! 🎉");
-    } catch (err) {
-        console.error("Status synchronization failed:", err);
-    } finally {
-        hideSpinner();
-    }
-}
-
-function toggleTheme() {
-    const isDark = document.body.classList.toggle('dark-mode');
-    const currentMode = isDark ? 'dark-mode' : 'light-mode';
-    document.body.classList.remove(isDark ? 'light-mode' : 'dark-mode');
-    localStorage.setItem('hubTheme', currentMode);
-    updateThemeToggleButton(currentMode);
-}
-
-function updateThemeToggleButton(theme) {
-    const toggleBtn = document.getElementById('theme-toggle');
-    if (!toggleBtn) return;
-    toggleBtn.innerHTML = theme === 'dark-mode' ? '<i class=\"fas fa-sun\" style=\"color:#ffd166\"></i>' : '<i class=\"fas fa-moon\"></i>';
-}
-
-function updateFileLabel() {
-    const inp = document.getElementById('modal-file-input');
-    if(!inp) return;
-    if(inp.files.length === 1) {
-        document.getElementById('file-chosen-text').innerText = inp.files[0].name;
-    } else if(inp.files.length > 1) {
-        document.getElementById('file-chosen-text').innerText = `📊 Packed Configuration (${inp.files.length} Images Loaded)`;
-    }
-}
-
-function openUploadModal(e) { if(e) e.preventDefault(); document.getElementById('upload-modal').classList.remove('hidden'); }
-function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); }
-
-function handleSubjectChange() { /* Keeping fallback structure intact if you want logic adjustments */ }
-function launchMediaTheatreCarousel(payloads, title) {
+// Lightbox Window management
+function launchTheatreImageCarousel(title, payloads) {
     const view = document.getElementById('theatre-view-viewport');
     document.getElementById('theatre-filename-label').innerText = title;
     view.innerHTML = payloads.map(p => `<img src="${p}" style="max-width:100%; max-height:75vh; border-radius:12px; margin-bottom:1rem; object-fit:contain;">`).join("");
     document.getElementById('theatre-lightbox').classList.remove('hidden');
 }
+
 function launchTheatreStandalonePDF(url) {
     const view = document.getElementById('theatre-view-viewport');
-    document.getElementById('theatre-filename-label').innerText = "Shared Document Interface";
+    document.getElementById('theatre-filename-label').innerText = "Shared Document Viewer";
     view.innerHTML = `<iframe src="${url}" style="width:100%; height:75vh; border:none; border-radius:12px;"></iframe>`;
     document.getElementById('theatre-lightbox').classList.remove('hidden');
 }
-function closeMediaTheatre() { document.getElementById('theatre-lightbox').classList.add('hidden'); }
 
-function setupDesktopDragScroll() {
-    const slider = document.querySelector('.filter-row');
-    if (!slider) return;
-    let isDown = false; let startX; let scrollLeft;
-    slider.addEventListener('mousedown', (e) => { isDown = true; startX = e.pageX - slider.offsetLeft; scrollLeft = slider.scrollLeft; });
-    slider.addEventListener('mouseleave', () => { isDown = false; });
-    slider.addEventListener('mouseup', () => { isDown = false; });
-    slider.addEventListener('mousemove', (e) => { if(!isDown) return; e.preventDefault(); const x = e.pageX - slider.offsetLeft; const walk = (x - startX) * 2; slider.scrollLeft = scrollLeft - walk; });
-}
+function closeMediaTheatre() { document.getElementById('theatre-lightbox').classList.add('hidden'); }
+function openUploadModal(e) { if(e) e.preventDefault(); document.getElementById('upload-modal').classList.remove('hidden'); }
+function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); }
+function toggleMainLoader(show, label = "") { const loader = document.getElementById('loader-container'); if(loader) { if(show){ loader.classList.remove('hidden'); document.getElementById('loader-text').innerText = label; } else { loader.classList.add('hidden'); } } }
+function toggleTheme() { const isDark = document.body.classList.toggle('dark-mode'); localStorage.setItem('hubTheme', isDark ? 'dark-mode' : 'light-mode'); updateThemeToggleButton(isDark ? 'dark-mode' : 'light-mode'); }
+function updateThemeToggleButton(theme) { const toggleBtn = document.getElementById('theme-toggle'); if (toggleBtn) toggleBtn.innerHTML = theme === 'dark-mode' ? '<i class="fas fa-sun"></i> Light UI' : '<i class="fas fa-moon"></i> Dark UI'; }
+function updateFileLabel() { const inp = document.getElementById('modal-file-input'); if(inp && inp.files.length > 0) document.getElementById('file-chosen-text').innerText = `${inp.files.length} attachment(s) locked`; }

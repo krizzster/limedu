@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>limedu</title>
+    <title>limedu | Classroom Hub</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,106 +11,83 @@
 
     <div id="loader-container" class="hidden">
         <div class="spinner"></div>
-        <p class="loading-text" id="loader-text">Synchronizing limedu Data...</p>
+        <p class="loading-text" id="loader-text">Syncing with limedu Feed...</p>
     </div>
 
     <div id="login-container" class="login-wrapper fade-in">
-        <div class="card">
-            <h2>🎒 limedu Crew Login</h2>
-            <p>Connect with your hub workspace</p>
-            <div class="input-group">
-                <input type="text" id="username" placeholder="Your Name (e.g. Neyansh Naksh)" required>
+        <div class="social-login-card">
+            <div class="brand-mascot">🎒</div>
+            <h2>limedu Crew</h2>
+            <p>Jump back into your friend hub</p>
+            <div class="input-field-group">
+                <i class="fas fa-user-tag"></i>
+                <input type="text" id="username" placeholder="Your Full Name" required>
             </div>
-            <div class="input-group">
-                <input type="password" id="password" placeholder="Password" required>
+            <div class="input-field-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="password" placeholder="Passcode Key" required>
             </div>
-            <button id="login-btn" onclick="handleLogin()">Login</button>
+            <button id="login-btn" onclick=\"handleLogin()\">Enter Workspace <i class="fas fa-arrow-right"></i></button>
             <p id="login-error" class="error-msg"></p>
         </div>
     </div>
 
     <div id="app-container" class="app-layout hidden">
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <span class="brand-logo">🎒</span>
-                <span class="brand-name">limedu</span>
-            </div>
-            <nav class="sidebar-menu">
-                <button class="nav-item active" onclick="switchSection('feed')">
-                    <i class="fas fa-stream"></i> <span>Feed Workspace</span>
-                </button>
-                <button class="nav-item" onclick="switchSection('members')">
-                    <i class="fas fa-users"></i> <span>Crew Directory</span>
-                </button>
-            </nav>
-            <div class="sidebar-footer">
-                <div class="user-badge">
-                    <div class="avatar" id="user-avatar">?</div>
-                    <div class="user-info">
-                        <span class="user-name" id="current-user-display">Guest</span>
-                        <span class="user-role" id="current-user-class">Class --</span>
-                    </div>
+        
+        <aside class="sidebar-panel">
+            <div class="hub-header">
+                <span class="hub-icon">✨</span>
+                <div class="hub-branding">
+                    <h1 id="group-title-label">The Hub</h1>
+                    <span class="workspace-badge">Active Station</span>
                 </div>
-                <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+
+            <div class="current-user-card">
+                <div class="profile-avatar" id="current-user-avatar">?</div>
+                <div class="profile-details">
+                    <h3 id="current-user-name">Loading...</h3>
+                    <span id="current-user-class">Class --</span>
+                </div>
+            </div>
+
+            <div class="status-config-box">
+                <label><i class="fas fa-comment-dots"></i> Update Broadcast</label>
+                <div class="status-input-row">
+                    <input type="text" id="custom-status-input" placeholder="What are you working on?">
+                    <button onclick="syncCustomStatus()"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+
+            <nav class="hub-navigation">
+                <span class="menu-label">Subject Portals</span>
+                <div class="filter-row" id="subject-filter-rack">
+                    </div>
+            </nav>
+
+            <div class="sidebar-action-footer">
+                <button class="utility-pill-btn" id="theme-toggle" onclick="toggleTheme()">
+                    <i class="fas fa-moon"></i> Dark Mode
+                </button>
             </div>
         </aside>
 
-        <main class="main-content">
-            <header class="top-bar">
-                <div class="search-box">
+        <main class="main-stream-area">
+            <header class="stream-header-bar">
+                <div class="search-wrapper">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="feed-search" placeholder="Filter dynamic feed content..." oninput="filterFeed()">
-                </div>
-                <div class="top-bar-actions">
-                    <button class="action-circle-btn" id="theme-toggle" onclick="toggleTheme()">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    <button class="action-circle-btn" onclick="openStatusModal()">
-                        <i class="fas fa-comment-alt"></i>
-                    </button>
-                    <button class="primary-btn" onclick="openUploadModal()">
-                        <i class="fas fa-cloud-upload-alt"></i> Upload Asset
-                    </button>
+                    <input type="text" id="global-search-bar" oninput="renderFeedStream()" placeholder="Search documents, configurations, or friends...">
                 </div>
             </header>
 
-            <section id="section-feed" class="content-section">
-                <div class="filter-row">
-                    <button class="filter-tag active" onclick="filterSubject('All')">All Subjects</button>
-                    <button class="filter-tag" onclick="filterSubject('Science')">Science</button>
-                    <button class="filter-tag" onclick="filterSubject('English')">English</button>
-                    <button class="filter-tag" onclick="filterSubject('Social Science')">Social Science</button>
-                    <button class="filter-tag" onclick="filterSubject('Hindi')">Hindi</button>
-                    <button class="filter-tag" onclick="filterSubject('Maths')">Maths</button>
-                    <button class="filter-tag" onclick="filterSubject('Sanskrit')">Sanskrit</button>
-                    <button class="filter-tag" onclick="filterSubject('Other')">Other</button>
-                </div>
-                <div class="feed-grid" id="feed-container"></div>
-            </section>
-
-            <section id="section-members" class="content-section hidden">
-                <div class="section-header">
-                    <h3>👥 Active Classroom Monitors</h3>
-                    <p>Live status listings of active workspace workspace environments.</p>
-                </div>
-                <div class="members-stack" id="members-list"></div>
-            </section>
+            <section class="feed-canvas" id="social-feed-stream">
+                </section>
         </main>
-    </div>
 
-    <div id="status-modal" class="modal-overlay hidden" onclick="closeStatusModal()">
-        <div class="modal-window" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3><i class="fas fa-comment-alt"></i> Broaden Status Update</h3>
-                <button class="close-modal-btn" onclick="closeStatusModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="input-group">
-                    <label>What's your current assignment status?</label>
-                    <input type="text" id="modal-status-input" placeholder="e.g. Solving Maths Chapter 4 layout...">
-                </div>
-                <button class="primary-btn" style="width:100%; margin-top:1rem;" onclick="triggerStatusSyncPipeline()">Sync Status Info</button>
-            </div>
+        <div class="interaction-hotbar">
+            <button class="hotbar-action-node primary" onclick="openUploadModal(event)">
+                <i class="fas fa-plus"></i> Share Asset
+            </button>
         </div>
     </div>
 
@@ -118,17 +95,17 @@
         <div class="modal-window" onclick="event.stopPropagation()">
             <div class="modal-drag-handle"></div>
             <div class="modal-header">
-                <h3><i class="fas fa-file-upload"></i> Distribute Document Node</h3>
+                <h3><i class="fas fa-cloud-upload-alt"></i> Share New Asset</h3>
                 <button class="close-modal-btn" onclick="closeUploadModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="input-group">
-                    <label>Document Assignment Title</label>
-                    <input type="text" id="modal-file-name" placeholder="e.g. Science Notes Part 2" required>
+                    <label>Resource Title</label>
+                    <input type="text" id="modal-file-title" placeholder="e.g., Biology Lab Framework, Math Test Pack">
                 </div>
                 <div class="input-group">
-                    <label>Short Description (Optional)</label>
-                    <input type="text" id="modal-file-notes" placeholder="Add custom notes context details...">
+                    <label>Description Note</label>
+                    <input type="text" id="modal-file-desc" placeholder="Add custom context for your friends...">
                 </div>
                 <div class="input-group">
                     <label>Subject Category</label>
@@ -143,24 +120,25 @@
                     </select>
                 </div>
                 <div id="dynamic-subcategories-wrapper"></div>
+                
                 <div class="input-group">
-                    <label class="file-dropzone">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <span id=\"file-chosen-text\">Upload PDF or Multiple Images</span>
-                        <input type="file" id="modal-file-input" onchange="updateFileLabel()" accept="application/pdf, image/*" multiple style="display:none;">
+                    <label class="file-dropzone-label">
+                        <i class="fas fa-file-pdf"></i>
+                        <span id="file-chosen-text">Tap to attach files/images</span>
+                        <input type="file" id="modal-file-input" onchange=\"updateFileLabel()\" accept="application/pdf, image/*" multiple style="display:none;">
                     </label>
                 </div>
-                <button id="modal-upload-btn" onclick="triggerSupabaseUploadPipeline()">Publish to Feed</button>
+                <button id="modal-upload-btn" onclick="triggerSupabaseUploadPipeline()">Publish to Feed Stream 🚀</button>
                 <p id="upload-error" class="error-msg" style="text-align:center;"></p>
             </div>
         </div>
     </div>
 
-    <div id="theatre-lightbox" class="theatre-overlay" onclick="closeMediaTheatre()">
+    <div id="theatre-lightbox" class="theatre-overlay" onclick=\"closeMediaTheatre()\">
         <div class="theatre-window" onclick="event.stopPropagation()">
             <div class="theatre-navbar">
-                <span class="theatre-title" id="theatre-filename-label">View Share Asset</span>
-                <button class="theatre-close-btn" onclick="closeMediaTheatre()">&times;</button>
+                <span class="theatre-title" id="theatre-filename-label">Asset Viewer</span>
+                <button class="theatre-close-btn" onclick=\"closeMediaTheatre()\">&times;</button>
             </div>
             <div class="theatre-stage" id="theatre-view-viewport"></div>
         </div>
