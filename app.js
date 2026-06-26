@@ -65,7 +65,7 @@ async function synchronizeDataPipeline() {
         // Updated target reference to match renamed table 'limedu'
         const { data, error } = await dbInstance
             .from('limedu')
-            .select('data_object')
+            .select('payload')
             .single();
 
         if (error) throw error;

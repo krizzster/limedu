@@ -9,9 +9,9 @@
 </head>
 <body class="light-mode">
 
-    <div id="loader-container" class="hidden">
-        <div class="spinner"></div>
-        <p class="loading-text" id="loader-text">Syncing with limedu Feed...</p>
+    <div id=\"loader-container\" class=\"hidden\">
+        <div class=\"spinner\"></div>
+        <p class=\"loading-text\" id=\"loader-text\">Syncing with limedu Feed...</p>
     </div>
 
     <div id="login-container" class="login-wrapper fade-in">
@@ -27,7 +27,7 @@
                 <i class="fas fa-lock"></i>
                 <input type="password" id="password" placeholder="Passcode Key" required>
             </div>
-            <button id="login-btn" onclick="handleLogin()">Login</button>
+            <button id="login-btn" onclick="handleLogin()">Log In</button>
             <p id="login-error" class="error-msg"></p>
         </div>
     </div>
@@ -35,145 +35,89 @@
     <div id="dashboard-container" class="hidden">
         
         <header class="app-top-bar">
-            <div class="top-bar-branding">
-                <span class="logo-icon">🚀</span>
-                <h1 class="app-title-text">limedu</h1>
-            </div>
-            <button id="theme-toggle" class="system-circle-btn" onclick="toggleTheme()" title="Toggle Visual Mode">
-                <i class="fas fa-moon"></i>
-            </button>
-        </header>
-
-        <main class="main-workspace-frame">
-            
-            <div id="feed-panel-view" class="view-panel-container">
-                <div class="filter-row-slider">
-                    <button class="filter-chip-btn active" onclick="applySubjectFilter('All', this)">All Feeds</button>
-                    <button class="filter-chip-btn" onclick="applySubjectFilter('Science', this)">Science</button>
-                    <button class="filter-chip-btn" onclick="applySubjectFilter('English', this)">English</button>
-                    <button class="filter-chip-btn" onclick="applySubjectFilter('Social Science', this)">Social Sci</button>
-                    <button class="filter-chip-btn" onclick="applySubjectFilter('Hindi', this)">Hindi</button>
-                    <button class="filter-chip-btn" onclick="applySubjectFilter('Maths', this)">Maths</button>
-                    <button class="filter-chip-btn" onclick="applySubjectFilter('Sanskrit', this)">Sanskrit</button>
-                    <button class="filter-chip-btn" onclick="applySubjectFilter('Other', this)">Other</button>
+            <div class="top-bar-inner">
+                <div class="branding-block">
+                    <span class="hub-logo-mark">limedu</span>
                 </div>
-
-                <div id="dynamic-feed-stream-target" class="cards-timeline-column">
-                    </div>
-            </div>
-
-            <div id="stats-panel-view" class="view-panel-container hidden">
-                <div class="card metrics-leaderboard-card">
-                    <h3><i class="fas fa-star-half-alt"></i> Top Resource Contributors</h3>
-                    <p class="section-subtitle-text">Live ranking of crew members sharing notes and configurations</p>
-                    <div id="leaderboard-list-target" class="stats-rows-stack">
-                        </div>
-                </div>
-            </div>
-
-            <div id="profile-panel-view" class="view-panel-container hidden">
-                <div class="profile-hero-card">
-                    <div class="profile-avatar-editing-wrapper">
-                        <img id="profile-display-avatar" src="profilepics/placeholdername.png" alt="User PFP">
-                        <button class="avatar-edit-overlay-trigger" onclick="openPfpSelectionConsole()">
-                            <i class="fas fa-camera"></i> Change Picture
-                        </button>
-                    </div>
-                    <h2 id="profile-display-name">Kriz</h2>
-                    <p id="profile-display-status" class="profile-current-status-quote">⚡ Synthesizing system configuration metrics...</p>
-                    
-                    <div class="profile-meta-badges">
-                        <span class="profile-badge-pill"><i class="fas fa-school"></i> Class: <span id="profile-display-class">7D</span></span>
-                        <span class="profile-badge-pill status-active-pill"><i class="fas fa-shield-alt"></i> Class Monitor</span>
-                    </div>
-                </div>
-
-                <div class="profile-extended-stats-grid">
-                    <div class="card status-stat-card">
-                        <h4><i class="fas fa-terminal"></i> Core Dev Workstation</h4>
-                        <p class="workstation-specs-text">
-                            <strong>Processor Hierarchy:</strong> 12th Gen Intel Core i5<br>
-                            <strong>Memory Allotment:</strong> 16GB System RAM Allocation<br>
-                            <strong>Active Node Connection:</strong> Secure Web Gateway Sync
-                        </p>
-                    </div>
-                    <div class="card status-stat-card">
-                        <h4><i class="fas fa-chart-line"></i> Hub Metric Tracking</h4>
-                        <p class="workstation-specs-text">
-                            <strong>Sync Pipeline Code:</strong> Main-Branch Stable v2.4<br>
-                            <strong>Database Integration:</strong> Active Live Connection
-                        </p>
-                    </div>
-                </div>
-
-                <div class="card profile-settings-form-box">
-                    <h3><i class="fas fa-sliders-h"></i> Personal Profile Customization Node</h3>
-                    
-                    <div class="input-row-flex">
-                        <div class="input-group flexible-group">
-                            <label>Dynamic Status Phrase</label>
-                            <input type="text" id="input-settings-status" placeholder="What is your current focus?">
-                        </div>
-                        <div class="input-group strict-width-group">
-                            <label>Class/Section</label>
-                            <input type="text" id="input-settings-class" placeholder="e.g. 7D">
-                        </div>
-                    </div>
-
-                    <div class="input-row-flex">
-                        <div class="input-group flexible-group">
-                            <label>Alter Username Handle</label>
-                            <input type="text" id="input-settings-username" placeholder="New display identity">
-                        </div>
-                        <div class="input-group flexible-group">
-                            <label>Alter Passcode Entry Key</label>
-                            <input type="password" id="input-settings-password" placeholder="New secret passcode sequence">
-                        </div>
-                    </div>
-                    
-                    <button class="brand-action-btn" onclick="saveProfileSettingsPipeline()">
-                        <i class="fas fa-save"></i> Synchronize Settings Profile
+                
+                <div class="header-action-nodes">
+                    <button id="theme-toggle" class="utility-icon-btn" onclick="toggleTheme()" title="Switch Aesthetics Matrix">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="logout-btn" class="utility-icon-btn critical-exit" onclick="handleLogout()" title="Disconnect Grid Session">
+                        <i class="fas fa-power-off"></i>
                     </button>
                 </div>
             </div>
+        </header>
 
+        <main class="main-workspace-scroller">
+            <div class="main-column-feed-wrapper">
+                
+                <div class="user-identity-profile-card">
+                    <div class="identity-layout-row">
+                        <div id="user-avatar-slot" class="user-avatar">
+                            <img src="https://ui-avatars.com/api/?name=User&background=1877f2&color=fff&bold=true" alt="Avatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                        </div>
+                        <div class="identity-text-details">
+                            <h3 id="user-name-label">Loading Identity Vector...</h3>
+                            <div class="dynamic-status-input-container">
+                                <input type="text" id="user-status-input" placeholder="Set a status custom flag..." maxlength="70">
+                                <button class="status-sync-btn" onclick="synchronizeStatusUpdate()" title="Save Status Matrix">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="friends-hotbar-container">
+                    <div class="hotbar-header">
+                        <span class="section-title">THE 6B CREW</span>
+                    </div>
+                    <div class="hotbar-scroll-track" id="friends-status-list">
+                        </div>
+                </div>
+
+                <div class="quick-publish-banner-card" onclick="openUploadModal(event)">
+                    <div class="publish-prompt-row">
+                        <div class="mini-avatar-placeholder">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="fake-input-field">Share configuration payloads or images...</div>
+                    </div>
+                </div>
+
+                <div class="filter-row-scroller-shell">
+                    <div class="filter-row">
+                        <button class="filter-chip-btn active" onclick="handleSubjectFilterSelection(this, 'All')">All Feeds</button>
+                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Science')">Science</button>
+                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'English')">English</button>
+                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Social Science')">Social Sci</button>
+                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Hindi')">Hindi</button>
+                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Maths')">Maths</button>
+                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Sanskrit')">Sanskrit</button>
+                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Other')">Other Docs</button>
+                    </div>
+                </div>
+
+                <div id="feed-stream-interactive-container" class="feed-stream-timeline">
+                    </div>
+                
+            </div>
         </main>
-
-        <nav class="hotbar-container">
-            <button class="hotbar-item active" onclick="switchActiveViewport('feed', this)" title="Feed Dashboard">
-                <i class="fas fa-home"></i>
-            </button>
-            
-            <button class="hotbar-plus-btn" onclick="openUploadModal(event)" title="Publish Share Resource">
-                <i class="fas fa-plus"></i>
-            </button>
-            
-            <button class="hotbar-item" onclick="switchActiveViewport('stats', this)" title="Leaderboard Rankings">
-                <i class="fas fa-trophy"></i>
-            </button>
-            <button class="hotbar-item" onclick="switchActiveViewport('profile', this)" title="Profile Console">
-                <i class="fas fa-user"></i>
-            </button>
-        </nav>
     </div>
 
     <div id="upload-modal" class="modal-overlay hidden" onclick="closeUploadModal()">
-        <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-card-window animate-slide-up" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <h3>📤 Share Classroom Resource</h3>
+                <h3>📤 Package Document Payload</h3>
                 <button class="close-modal-btn" onclick="closeUploadModal()">&times;</button>
             </div>
             <div class="modal-body">
+                
                 <div class="input-group">
-                    <label>Resource Title</label>
-                    <input type="text" id="modal-file-title" placeholder="What topic are you publishing?">
-                </div>
-                <div class="input-group">
-                    <label>Description / Context Notes</label>
-                    <textarea id="modal-file-desc" placeholder="Provide extra text or documentation guidelines..."></textarea>
-                </div>
-                <div class="input-group">
-                    <label>Subject Category</label>
+                    <label>Configuration Subject Array</label>
                     <select id="modal-file-subject" onchange="handleSubjectChange()">
                         <option value="Science">Science</option>
                         <option value="English">English</option>
@@ -184,8 +128,14 @@
                         <option value="Other">Other</option>
                     </select>
                 </div>
+
                 <div id="dynamic-subcategories-wrapper"></div>
-                
+
+                <div class="input-group" style="margin-top: 14px;">
+                    <label>Context Blueprint Metadata Info</label>
+                    <textarea id="modal-file-desc" placeholder="Optional notes..."></textarea>
+                </div>
+
                 <div class="input-group" style="margin-top: 14px;">
                     <label class="file-dropzone-label">
                         <i class="fas fa-file-pdf"></i>
@@ -194,47 +144,7 @@
                     </label>
                 </div>
                 <button id="modal-upload-btn" onclick="triggerSupabaseUploadPipeline()">Publish to Feed Stream 🚀</button>
-                <p id=\"upload-error\" class=\"error-msg\" style=\"text-align:center; margin-top: 10px;\"></p>
-            </div>
-        </div>
-    </div>
-
-    <div id="edit-post-modal" class="modal-overlay hidden" onclick="closeEditPostModal()">
-        <div class="modal-card" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3>✏️ Edit Post Content Stream</h3>
-                <button class="close-modal-btn" onclick="closeEditPostModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="input-group">
-                    <label>Update Subject Title</label>
-                    <input type="text" id="edit-modal-title" placeholder="Topic details...">
-                </div>
-                <div class="input-group">
-                    <label>Update Description Content</label>
-                    <textarea id="edit-modal-desc" placeholder="Provide extra descriptions..."></textarea>
-                </div>
-                <button id="modal-save-edit-btn" class="brand-action-btn">Save Changes</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="pfp-picker-modal" class="modal-overlay hidden" onclick="closePfpSelectionConsole()">
-        <div class="modal-card target-pfp-picker-card" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3>🖼️ Select System Identity Avatar</h3>
-                <button class="close-modal-btn" onclick="closePfpSelectionConsole()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <label class="custom-file-upload-block">
-                    <i class="fas fa-upload"></i>
-                    <p>Upload Custom Image File Manually</p>
-                    <input type="file" id="pfp-raw-file-input" accept="image/*" style="display: none;" onchange="processCustomPfpDirectUpload(this)">
-                </label>
-                
-                <p class="presets-gallery-header-label">Or choose from existing preset framework profile pics:</p>
-                <div id="pfp-preset-gallery-view" class="pfp-preset-grid-layout">
-                    </div>
+                <p id="upload-error" class="error-msg" style="text-align:center; margin-top: 10px;"></p>
             </div>
         </div>
     </div>
