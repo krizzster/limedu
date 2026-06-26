@@ -9,7 +9,7 @@
 </head>
 <body class="light-mode">
 
-    <div id=\"loader-container\" class="hidden">
+    <div id="loader-container" class="hidden">
         <div class="spinner"></div>
         <p class="loading-text" id="loader-text">Synchronizing limedu Data...</p>
     </div>
@@ -18,7 +18,7 @@
         <div class="card">
             <h2>🎒 limedu Crew Login</h2>
             <p>Connect with your hub workspace</p>
-            <div class="input-group">
+            <div class=\"input-group\">
                 <input type="text" id="username" placeholder="Your Name (e.g. Neyansh Naksh)" required>
             </div>
             <div class="input-group">
@@ -29,83 +29,103 @@
         </div>
     </div>
 
-    <div id="dashboard-container" class="app-container hidden">
-        <header class="header-nav">
-            <div class="hub-branding">
-                <h1 id="hub-title">limedu</h1>
-                <div class="hub-meta-badge">
-                    <span class="hub-tag">Feed</span>
+    <div id="app-container" class="app-layout hidden">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="brand-logo">🎒</span>
+                <span class="brand-name">limedu</span>
+            </div>
+            <nav class="sidebar-menu">
+                <button class="nav-item active" onclick="switchSection('feed')">
+                    <i class="fas fa-stream"></i> <span>Feed Workspace</span>
+                </button>
+                <button class="nav-item" onclick="switchSection('members')">
+                    <i class="fas fa-users"></i> <span>Crew Directory</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-badge">
+                    <div class="avatar" id="user-avatar">?</div>
+                    <div class="user-info">
+                        <span class="user-name" id="current-user-display">Guest</span>
+                        <span class="user-role" id="current-user-class">Class --</span>
+                    </div>
                 </div>
+                <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
             </div>
-            <div class="action-control-buttons">
-                <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
-                <button class="icon-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
-            </div>
-        </header>
+        </aside>
 
-        <div class="status-row-card">
-            <div class="status-avatar" id="my-avatar">LM</div>
-            <div class="status-input-wrapper">
-                <input type="text" id="status-input" placeholder="Set custom workspace status broadcast...">
-                <button class="status-sync-btn" onclick="updateLiveStatus()">Broadcast</button>
-            </div>
-        </div>
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="feed-search" placeholder="Filter dynamic feed content..." oninput="filterFeed()">
+                </div>
+                <div class="top-bar-actions">
+                    <button class="action-circle-btn" id="theme-toggle" onclick="toggleTheme()">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button class="action-circle-btn" onclick="openStatusModal()">
+                        <i class="fas fa-comment-alt"></i>
+                    </button>
+                    <button class="primary-btn" onclick="openUploadModal()">
+                        <i class="fas fa-cloud-upload-alt"></i> Upload Asset
+                    </button>
+                </div>
+            </header>
 
-        <div id="tab-feed" class="tab-panel">
-            <div class="filter-bar-container">
-                <button class="filter-btn active" onclick="filterSubject('all')">All Shares</button>
-                <button class="filter-btn" onclick="filterSubject('Science')">Science</button>
-                <button class="filter-btn" onclick="filterSubject('Maths')">Maths</button>
-                <button class="filter-btn" onclick="filterSubject('English')">English</button>
-                <button class="filter-btn" onclick="filterSubject('Social Science')">Social Science</button>
-                <button class="filter-btn" onclick="filterSubject('Hindi')">Hindi</button>
-                <button class="filter-btn" onclick="filterSubject('Sanskrit')">Sanskrit</button>
-                <button class="filter-btn" onclick="filterSubject('Other')">Other</button>
-            </div>
-            <div class="feed-stream" id="global-feed"></div>
-        </div>
+            <section id="section-feed" class="content-section">
+                <div class="filter-row">
+                    <button class="filter-tag active" onclick="filterSubject('All')">All Subjects</button>
+                    <button class="filter-tag" onclick="filterSubject('Science')">Science</button>
+                    <button class="filter-tag" onclick="filterSubject('English')">English</button>
+                    <button class="filter-tag" onclick="filterSubject('Social Science')">Social Science</button>
+                    <button class="filter-tag" onclick="filterSubject('Hindi')">Hindi</button>
+                    <button class="filter-tag" onclick="filterSubject('Maths')">Maths</button>
+                    <button class="filter-tag" onclick="filterSubject('Sanskrit')">Sanskrit</button>
+                    <button class="filter-tag" onclick="filterSubject('Other')">Other</button>
+                </div>
+                <div class="feed-grid" id="feed-container"></div>
+            </section>
 
-        <div id="tab-leaderboard" class="tab-panel hidden">
-            <div class="leader-board-card">
-                <h3>📈 Contributor Leaderboards</h3>
-                <div class="leader-list" id="leaderboard-list"></div>
-            </div>
-        </div>
-
-        <div id="tab-notes" class="tab-panel hidden">
-            <div class="leader-board-card">
-                <h3>📝 Personal Profiles & Memos</h3>
-                <p style="color:var(--text-muted); font-size:0.9rem; font-weight:600;">Workspace profiles subsystem loading next stage module parameters...</p>
-            </div>
-        </div>
-
-        <nav class="hotbar-navigation">
-            <button class="hotbar-item active" id="nav-feed" onclick="switchTab('feed')">
-                <i class="fas fa-layer-group"></i><span>Feed</span>
-            </button>
-            <button class="hotbar-item" id="nav-leaderboard" onclick="switchTab('leaderboard')">
-                <i class="fas fa-trophy"></i><span>Stats</span>
-            </button>
-            <button class="hotbar-item" id="nav-notes" onclick="switchTab('notes')">
-                <i class="fas fa-user"></i><span>Profiles</span>
-            </button>
-            <button class="hotbar-item" style="color:var(--accent)" onclick="openUploadModal(event)">
-                <i class="fas fa-plus-circle" style="font-size:1.3rem"></i><span>Share</span>
-            </button>
-        </nav>
+            <section id="section-members" class="content-section hidden">
+                <div class="members-grid" id="members-container"></div>
+            </section>
+        </main>
     </div>
 
-    <div id="upload-modal" class="modal-overlay" onclick="closeUploadModal(event)">
-        <div class="modal-drawer" onclick="event.stopPropagation()">
+    <div id="status-modal" class="modal-backdrop hidden" onclick="closeStatusModal()">
+        <div class="modal-card modal-bottom-sheet" onclick="event.stopPropagation()">
             <div class="modal-drag-handle"></div>
             <div class="modal-header">
-                <h3><i class="fas fa-cloud-upload-alt" style="color:var(--accent)"></i> Publish Asset</h3>
-                <button class="close-modal-btn" onclick="closeUploadModal(event)">&times;</button>
+                <h3><i class="fas fa-comment-alt"></i> Broadcast Status</h3>
+                <button class="close-modal-btn" onclick="closeStatusModal()">&times;</button>
             </div>
-            <div class="modal-body-form">
+            <div class="modal-body">
                 <div class="input-group">
-                    <label>Display Reference Name</label>
-                    <input type="text" id="modal-file-name" placeholder="e.g., Chapter 3 Geometry Proofs">
+                    <label>Your Current Status Message</label>
+                    <input type="text" id="modal-status-input" placeholder="What are you working on right now?">
+                </div>
+                <button id="modal-status-btn" onclick="triggerStatusSyncPipeline()">Broadcast Update</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="upload-modal" class="modal-backdrop hidden" onclick="closeUploadModal()">
+        <div class="modal-card modal-bottom-sheet" onclick="event.stopPropagation()">
+            <div class="modal-drag-handle"></div>
+            <div class="modal-header">
+                <h3><i class="fas fa-cloud-upload-alt"></i> Upload Workspace Asset</h3>
+                <button class="close-modal-btn" onclick="closeUploadModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Asset Display Name</label>
+                    <input type="text" id="modal-file-name" placeholder="E.g., Chapter 4 Notes, Assignments">
+                </div>
+                <div class="input-group">
+                    <label>Description Note (Optional)</label>
+                    <input type="text" id="modal-file-meta" placeholder="Add useful context details...">
                 </div>
                 <div class="input-group">
                     <label>Subject Category</label>
@@ -124,7 +144,7 @@
                     <label class="file-dropzone">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <span id="file-chosen-text">Upload PDF or Multiple Images</span>
-                        <input type="file" id="modal-file-input" onchange="updateFileLabel()" accept="application/pdf, image/*" multiple style="display:none;">
+                        <input type="file" id="modal-file-input" onchange="updateFileLabel()\" accept="application/pdf, image/*" multiple style="display:none;">
                     </label>
                 </div>
                 <button id="modal-upload-btn" onclick="triggerSupabaseUploadPipeline()">Publish to Feed</button>
