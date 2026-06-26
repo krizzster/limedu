@@ -29,6 +29,7 @@ const MATHS_CHAPTERS = [
 window.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('hubTheme') || 'light-mode';
     document.body.className = savedTheme;
+    updateThemeToggleButton(savedTheme);
     fetchStateFromSupabase();
 });
 
@@ -41,7 +42,7 @@ async function fetchStateFromSupabase() {
         globalData = data.payload;
         
         const labelEl = document.getElementById('group-title-label');
-        if (labelEl) labelEl.innerText = globalData.groupName || "The Hub";
+        if (labelEl) labelEl.innerText = globalData.groupName || "limedu";
         
         const cachedUser = localStorage.getItem('limeduUserKey');
         if (cachedUser && globalData.members[cachedUser]) {
@@ -75,7 +76,7 @@ function handleLogin() {
         if (errorEl) errorEl.innerText = "";
         bootSocialWorkspace();
     } else {
-        if (errorEl) errorEl.innerText = "🚨 Account key mismatch or invalid identity credentials.";
+        if (errorEl) errorEl.innerText = "🚨 Invalid name or identity entry passcode.";
     }
 }
 
@@ -87,13 +88,11 @@ function bootSocialWorkspace() {
 
     const profile = globalData.members[currentActiveFriendKey];
     
-    const userEl = document.getElementById('sidebar-display-name');
-    const classEl = document.getElementById('sidebar-current-class');
-    const avatarEl = document.getElementById('sidebar-user-avatar');
+    const userEl = document.getElementById('top-display-name');
+    const avatarEl = document.getElementById('top-user-avatar');
     const statusInp = document.getElementById('custom-status-input');
 
     if (userEl) userEl.innerText = profile.name;
-    if (classEl) classEl.innerText = `Class ${profile.currentClass || '--'}`;
     if (avatarEl) avatarEl.innerText = profile.name.charAt(0).toUpperCase();
     if (statusInp) statusInp.value = profile.status || "";
 
@@ -115,10 +114,7 @@ function switchActiveTab(tabKey) {
     if (targetTab) targetTab.classList.add('active');
     
     if (badgeMode) {
-        if (tabKey === 'feed') badgeMode.innerText = "FEED";
-        if (tabKey === 'leaderboard') badgeMode.innerText = "STATS";
-        if (tabKey === 'updates') badgeMode.innerText = "MEMOS";
-        if (tabKey === 'profile') badgeMode.innerText = "USER";
+        badgeMode.innerText = tabKey.toUpperCase() === 'UPDATES' ? 'MEMOS' : tabKey.toUpperCase() === 'LEADERBOARD' ? 'STATS' : tabKey.toUpperCase();
     }
 }
 
@@ -129,7 +125,7 @@ function renderSubjectFilters() {
     const subjects = ["All", "Science", "English", "Social Science", "Hindi", "Maths", "Sanskrit", "Other"];
     container.innerHTML = subjects.map(sub => `
         <button class="filter-pill ${selectedSubjectFilter === sub ? 'active' : ''}" onclick="applySubjectFilter('${sub}')">
-            ${sub === 'All' ? 'All Subjects' : sub}
+            ${sub === 'All' ? 'All' : sub}
         </button>
     `).join("");
 }
@@ -164,34 +160,37 @@ function renderFeedStream() {
         let visualPayloadContainer = "";
         if (post.isImageSet && post.imagePayloads && post.imagePayloads.length > 0) {
             visualPayloadContainer = `
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 12px;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px;">
                     ${post.imagePayloads.map(imgUrl => `
-                        <img src="${imgUrl}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 12px; cursor: pointer;" onclick="launchTheatreImageCarousel('${post.name.replace(/'/g, "\\'")}', ['${imgUrl}'])">
+                        <img src="${imgUrl}" style="width: 100%; height: 95px; object-fit: cover; border-radius: 10px; cursor: pointer;" onclick="launchTheatreImageCarousel('${post.name.replace(/'/g, "\\'")}', ${JSON.stringify(post.imagePayloads)})">
                     `).join("")}
                 </div>
             `;
         } else {
             visualPayloadContainer = `
                 <div class="pdf-attachment-anchor-link" style="margin-top: 12px;" onclick="launchTheatreStandalonePDF('${post.path}')">
-                    <i class="fas fa-file-pdf"></i>
-                    <div>
-                        <span style="display:block; font-weight:700;">${post.name}</span>
-                        <span style="font-size:0.75rem; color: var(--text-secondary);">${post.date} &middot; ${post.subject}</span>
+                    <div class="pdf-meta-block">
+                        <i class="fas fa-file-pdf"></i>
+                        <div>
+                            <span style="display:block; font-weight:700; font-size:0.9rem; line-height:1.2;">${post.name}</span>
+                            <span style="font-size:0.75rem; color: var(--text-secondary);">${post.date} &middot; ${post.subject}</span>
+                        </div>
                     </div>
+                    <i class="fas fa-chevron-right" style="color: var(--text-secondary); font-size: 0.8rem;"></i>
                 </div>
             `;
         }
 
         return `
-            <div class="showcase-card" style="padding: 1.5rem; margin-bottom: 1.25rem; border-radius: 20px;">
+            <div class="showcase-card">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div style="display: flex; gap: 12px; align-items: center;">
-                        <div class="avatar-frame" style="width:40px; height:40px; border-radius:50%; background: var(--social-blue-light); color: var(--social-blue);">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <div class="avatar-frame" style="width:36px; height:36px; font-size: 0.95rem;">
                             ${post.authorName.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <h4 style="font-size: 0.95rem; font-weight:800;">${post.authorName}</h4>
-                            ${post.authorStatus ? `<span style="font-size:0.75rem; font-style:italic; color: var(--text-secondary);">"${post.authorStatus}"</span>` : ''}
+                            <h4 style="font-size: 0.9rem; font-weight:800;">${post.authorName}</h4>
+                            ${post.authorStatus ? `<span style="font-size:0.75rem; color: var(--text-secondary); display:block; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${post.authorStatus}</span>` : ''}
                         </div>
                     </div>
                     ${isOwner ? `
@@ -201,13 +200,13 @@ function renderFeedStream() {
                     ` : ''}
                 </div>
                 
-                ${post.metaInfo ? `<p style="margin-top: 12px; font-size: 0.9rem; font-weight: 500; color: var(--text-secondary);">${post.metaInfo}</p>` : ''}
+                ${post.metaInfo ? `<p style="margin-top: 10px; font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); line-height:1.4;">${post.metaInfo}</p>` : ''}
                 ${visualPayloadContainer}
             </div>
         `;
     }).join("");
 
-    stream.innerHTML = elementsHtml || `<div style="text-align:center; padding: 3rem; color: var(--text-secondary); font-weight:700;">No shared assignments or assets here.</div>`;
+    stream.innerHTML = elementsHtml || `<div style="text-align:center; padding: 3rem; color: var(--text-secondary); font-weight:700; font-size:0.9rem;">No shared items in this stream.</div>`;
 }
 
 function renderLeaderboardEngine() {
@@ -217,21 +216,17 @@ function renderLeaderboardEngine() {
     let rankingData = [];
     for (const key in globalData.members) {
         const m = globalData.members[key];
-        rankingData.push({
-            name: m.name,
-            count: m.pdfs ? m.pdfs.length : 0
-        });
+        rankingData.push({ name: m.name, count: m.pdfs ? m.pdfs.length : 0 });
     }
-
     rankingData.sort((a, b) => b.count - a.count);
 
     container.innerHTML = rankingData.map((user, idx) => `
-        <div style="display:flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius:14px; border: 1px solid var(--border-soft);">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <span style="font-weight:800; color: var(--social-blue);">#${idx + 1}</span>
-                <span style="font-weight:700;">${user.name}</span>
+        <div style="display:flex; justify-content: space-between; align-items: center; background: var(--hub-bg); padding: 12px; border-radius:12px; border: 1px solid var(--border-soft);">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-weight:800; color: var(--social-blue); font-size:0.9rem;">#${idx + 1}</span>
+                <span style="font-weight:700; font-size:0.9rem;">${user.name}</span>
             </div>
-            <span class="subject-badge" style="background: var(--social-blue-light); color: var(--social-blue); font-weight:800; border-radius:8px;">${user.count} shares</span>
+            <span class="subject-badge" style="background: var(--social-blue-light); color: var(--social-blue); font-weight:800;">${user.count} shares</span>
         </div>
     `).join("");
 }
@@ -240,12 +235,12 @@ function renderWorkspaceMemos() {
     const target = document.getElementById('workspace-notes-container');
     if (!target) return;
     
-    const currentNoticeText = globalData.workspaceNotice || "Welcome to the upgraded workspace. Use the central publish tool to instantly share multi-image configurations or document assignments directly categorized by chapters and book pages.";
+    const currentNoticeText = globalData.workspaceNotice || "Welcome to the upgraded workspace. Use the central publish tool to instantly share items or document assignments.";
     
     target.innerHTML = `
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-soft); border-radius:16px; padding: 1.5rem;">
-            <h4 style="font-weight:800; font-size:1.1rem; margin-bottom:8px;">Notice Board</h4>
-            <p style="font-size:0.9rem; color: var(--text-secondary); line-height:1.5; font-weight:500;">${currentNoticeText}</p>
+        <div style="background: var(--hub-bg); border: 1px solid var(--border-soft); border-radius:14px; padding: 1rem;">
+            <h4 style="font-weight:800; font-size:0.95rem; margin-bottom:6px;"><i class="fas fa-bullhorn" style="color:var(--social-blue)"></i> Notice Board</h4>
+            <p style="font-size:0.85rem; color: var(--text-secondary); line-height:1.4; font-weight:500;">${currentNoticeText}</p>
         </div>
     `;
 }
@@ -258,22 +253,14 @@ function renderProfileManagementNode() {
     if (!profile) return;
 
     target.innerHTML = `
-        <div class="showcase-card shadow-card" style="padding: 2.5rem; text-align: center; display: flex; flex-direction: column; align-items: center;">
-            <div class="avatar-frame" style="width: 90px; height: 90px; border-radius: 50%; font-size: 2.5rem; background: #ff5e7e; color: white; margin-bottom: 1rem; box-shadow: 0 8px 20px rgba(255,94,126,0.25);">
+        <div class="showcase-card shadow-card" style="padding: 2rem; text-align: center; display: flex; flex-direction: column; align-items: center;">
+            <div class="avatar-frame" style="width: 76px; height: 76px; border-radius: 50%; font-size: 2rem; background: var(--social-blue-light); color: var(--social-blue); margin-bottom: 1rem;">
                 ${profile.name.substring(0, 2).toUpperCase()}
             </div>
-            <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 4px;">${profile.name}</h2>
-            <span class="subject-badge" style="background: rgba(255,255,255,0.08); color: var(--text-secondary); font-weight: 700; padding: 4px 12px; font-size:0.8rem;">${profile.currentClass || '7D'}</span>
+            <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px;">${profile.name}</h2>
+            <span class="subject-badge" style="background: var(--border-soft); color: var(--text-secondary); font-weight: 700; padding: 4px 10px;">Class ${profile.currentClass || '7D'}</span>
             
-            <div style="width: 100%; max-width: 400px; text-align: left; margin-top: 2rem; background: rgba(0,0,0,0.02); padding: 1.25rem; border-radius: 16px; border: 1px solid var(--border-soft);">
-                <label style="font-size: 0.75rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; display:block; margin-bottom: 8px;">Your Current Status:</label>
-                <div style="display:flex; gap:8px;">
-                    <input type="text" id="profile-direct-status-input" value="${profile.status || ''}" style="flex:1; padding: 12px; border-radius:10px; border: 1px solid var(--border-soft); background: var(--hub-bg); color: var(--text-primary); font-weight:600;" placeholder="Set personal context status...">
-                    <button onclick="syncProfileDirectStatus()" style="background: #ff5e7e; color: white; border: none; padding: 0 16px; border-radius: 10px; cursor: pointer; font-weight:800;"><i class="fas fa-check"></i></button>
-                </div>
-            </div>
-
-            <button onclick="logOutSession()" style="margin-top: 2rem; width: 100%; max-width: 400px; padding: 14px; border-radius: 12px; border: 1px solid var(--border-soft); background: transparent; color: #ef4444; font-weight: 800; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <button onclick="logOutSession()" style="margin-top: 2rem; width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-soft); background: transparent; color: var(--danger-red); font-weight: 800; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; font-size:0.9rem;">
                 <i class="fas fa-sign-out-alt"></i> Log Out of Hub
             </button>
         </div>
@@ -288,20 +275,6 @@ async function syncCustomStatus() {
         bootSocialWorkspace();
     } catch (err) {
         console.error("Status Sync Breakdown:", err);
-    }
-}
-
-async function syncProfileDirectStatus() {
-    const input = document.getElementById('profile-direct-status-input');
-    if (input) {
-        globalData.members[currentActiveFriendKey].status = input.value.trim();
-        try {
-            await dbInstance.from('hub_state').update({ payload: globalData }).eq('id', 1);
-            bootSocialWorkspace();
-            alert("Status synced successfully across the framework!");
-        } catch (err) {
-            console.error(err);
-        }
     }
 }
 
@@ -335,7 +308,7 @@ async function triggerSupabaseUploadPipeline() {
     const errEl = document.getElementById('upload-error');
     
     if (!title || fileInp.files.length === 0) {
-        if (errEl) errEl.innerText = "🚨 Asset title and file payload parameters required.";
+        if (errEl) errEl.innerText = "🚨 Asset title and file payload are required.";
         return;
     }
 
@@ -386,14 +359,14 @@ async function triggerSupabaseUploadPipeline() {
         bootSocialWorkspace();
     } catch (err) {
         console.error(err);
-        if (errEl) errEl.innerText = "🚨 Pipeline fault encountered during storage write.";
+        if (errEl) errEl.innerText = "🚨 Fault encountered during storage server upload.";
     } finally {
         toggleMainLoader(false);
     }
 }
 
 async function deleteAssetPipeline(userKey, index) {
-    if (!confirm("Are you sure you want to drop this asset post from the feed timeline?")) return;
+    if (!confirm("Remove this item post from the feed timeline?")) return;
     
     toggleMainLoader(true, "Removing Post...");
     try {
@@ -410,20 +383,22 @@ async function deleteAssetPipeline(userKey, index) {
 function launchTheatreImageCarousel(title, payloads) {
     const view = document.getElementById('theatre-view-viewport');
     document.getElementById('theatre-filename-label').innerText = title;
-    view.innerHTML = payloads.map(p => `<img src="${p}" style="max-width:100%; max-height:75vh; border-radius:12px; object-fit:contain;">`).join("");
+    view.innerHTML = payloads.map(p => `<img src="${p}">`).join("");
     document.getElementById('theatre-lightbox').classList.remove('hidden');
 }
 
 function launchTheatreStandalonePDF(url) {
     const view = document.getElementById('theatre-view-viewport');
-    document.getElementById('theatre-filename-label').innerText = "Shared Document Viewer";
-    view.innerHTML = `<iframe src="${url}" style="width:100%; height:75vh; border:none; border-radius:12px;"></iframe>`;
+    document.getElementById('theatre-filename-label').innerText = "Document Viewer";
+    view.innerHTML = `<iframe src="${url}"></iframe>`;
     document.getElementById('theatre-lightbox').classList.remove('hidden');
 }
 
 function closeMediaTheatre() { document.getElementById('theatre-lightbox').classList.add('hidden'); }
-function openUploadModal(e) { if(e) e.preventDefault(); document.getElementById('upload-modal').classList.remove('hidden'); }
+// Stop propagation fix on upload trigger to let modal open cleanly
+function openUploadModal(e) { if(e) { e.preventDefault(); e.stopPropagation(); } document.getElementById('upload-modal').classList.remove('hidden'); }
 function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); if(document.getElementById('upload-error')) document.getElementById('upload-error').innerText = ''; }
 function toggleMainLoader(show, label = "") { const loader = document.getElementById('loader-container'); if(loader) { if(show){ loader.classList.remove('hidden'); document.getElementById('loader-text').innerText = label; } else { loader.classList.add('hidden'); } } }
-function toggleTheme() { const isDark = document.body.classList.toggle('dark-mode'); localStorage.setItem('hubTheme', isDark ? 'dark-mode' : 'light-mode'); }
-function updateFileLabel() { const inp = document.getElementById('modal-file-input'); if(inp && inp.files.length > 0) document.getElementById('file-chosen-text').innerText = `${inp.files.length} attachment(s) locked`; }
+function toggleTheme() { const isDark = document.body.classList.toggle('dark-mode'); localStorage.setItem('hubTheme', isDark ? 'dark-mode' : 'light-mode'); updateThemeToggleButton(isDark ? 'dark-mode' : 'light-mode'); }
+function updateThemeToggleButton(theme) { const toggleBtn = document.querySelector('#theme-toggle i'); if (toggleBtn) { toggleBtn.className = theme === 'dark-mode' ? 'fas fa-sun' : 'fas fa-moon'; } }
+function updateFileLabel() { const inp = document.getElementById('modal-file-input'); if(inp && inp.files.length > 0) document.getElementById('file-chosen-text').innerText = `${inp.files.length} element(s) loaded`; }

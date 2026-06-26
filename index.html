@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>limedu | Dashboard</title>
+    <title>limedu | Classroom Hub</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,150 +11,124 @@
 
     <div id="loader-container" class="hidden">
         <div class="spinner"></div>
-        <p class="loading-text" id="loader-text">Syncing with limedu Core...</p>
+        <p class="loading-text" id="loader-text">Syncing with limedu Feed...</p>
     </div>
 
-    <div id="login-container" class="login-wrapper">
-        <div class="card security-card">
-            <div class="lock-icon">🔒</div>
-            <h2>limedu Portal</h2>
-            <p>Connect with your hub workspace</p>
-            <div class="input-group">
-                <i class="fas fa-user-shield"></i>
+    <div id="login-container" class="login-wrapper fade-in">
+        <div class="social-login-card">
+            <div class="brand-mascot">🎒</div>
+            <h2>limedu Crew</h2>
+            <p>Jump back into your friend hub</p>
+            <div class="input-field-group">
+                <i class="fas fa-user-tag"></i>
                 <input type="text" id="username" placeholder="Your Full Name" required>
             </div>
-            <div class="input-group">
-                <i class="fas fa-key"></i>
-                <input type="password" id="password" placeholder="Passcode Entry Key" required>
+            <div class="input-field-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="password" placeholder="Passcode Key" required>
             </div>
-            <button id="login-btn" onclick="handleLogin()">Authorized Session Boot 🚀</button>
+            <button id="login-btn" onclick="handleLogin()">Login</button>
             <p id="login-error" class="error-msg"></p>
         </div>
     </div>
 
     <div id="app-container" class="app-layout hidden">
         
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <div class="brand-avatar">🏫</div>
-                <div class="brand-meta">
-                    <span class="brand-name" id="group-title-label">limedu</span>
-                    <span class="brand-badge" id="app-badge-mode">FEED</span>
-                </div>
+        <header class="app-top-bar">
+            <div class="brand-meta">
+                <span class="brand-name" id="group-title-label">limedu</span>
+                <span class="brand-badge" id="app-badge-mode">FEED</span>
             </div>
+            <button id="theme-toggle" class="icon-action-btn" onclick="toggleTheme()" title="Toggle Interface Aesthetics">
+                <i class="fas fa-moon"></i>
+            </button>
+        </header>
 
-            <div class="user-profile-badge">
-                <div class="avatar-frame" id="sidebar-user-avatar">?</div>
-                <div class="profile-meta">
-                    <h4 id="sidebar-display-name">Active Session</h4>
-                    <span id="sidebar-current-class">Class Member</span>
+        <main class="workspace-stage">
+            
+            <section id="view-feed" class="tab-view-panel">
+                <div class="status-banner-card" id="user-status-banner-card">
+                    <div class="status-profile-block">
+                        <div class="avatar-frame" id="top-user-avatar">?</div>
+                        <div class="status-meta">
+                            <h4 id="top-display-name">Active Session</h4>
+                            <input type="text" id="custom-status-input" placeholder="What are you working on?" onchange="syncCustomStatus()">
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="interactive-status-box">
-                <label><i class="fas fa-comment-dots"></i> Broadcast Status</label>
-                <div class="status-input-wrapper">
-                    <input type="text" id="custom-status-input" placeholder="What are you working on?">
-                    <button onclick="syncCustomStatus()" title="Sync status across the hub"><i class="fas fa-paper-plane"></i></button>
+                <div class="filter-scroller-wrapper">
+                    <div class="filter-row" id="subject-filter-rack">
+                        </div>
                 </div>
-            </div>
 
-            <div class="sys-widget">
-                <div class="widget-header">
-                    <span><i class="fas fa-server"></i> System Core Status</span>
-                    <span class="pulse-indicator"></span>
+                <div class="feed-grid-stream" id="social-feed-stream"></div>
+            </section>
+
+            <section id="view-leaderboard" class="tab-view-panel hidden">
+                <div class="showcase-card shadow-card animate-card">
+                    <div class="showcase-header">
+                        <h3><i class="fas fa-chart-bar text-gold"></i> Hub Analytics</h3>
+                        <p>Who is carrying the crew storage?</p>
+                    </div>
+                    <div class="leaderboard-table-wrapper">
+                        <div id="leaderboard-anchor-body" style="display: flex; flex-direction: column; gap: 12px; padding-top: 1rem;">
+                            </div>
+                    </div>
                 </div>
-                <p id="system-status-text">Connected to Supabase Node</p>
-            </div>
+            </section>
 
-            <div class="sidebar-footer">
-                <button id="theme-toggle" class="footer-action-btn" onclick="toggleTheme()">
-                    <i class="fas fa-moon"></i> Dark UI
+            <section id="view-updates" class="tab-view-panel hidden">
+                <div class="showcase-card shadow-card animate-card">
+                    <div class="showcase-header">
+                        <h3><i class="fas fa-sticky-note"></i> Shared Workspace Notes</h3>
+                        <p>Quick memos, links, and updates for the group</p>
+                    </div>
+                    <div id="workspace-notes-container" style="padding-top: 1.5rem;">
+                        </div>
+                </div>
+            </section>
+
+            <section id="view-profile" class="tab-view-panel hidden">
+                <div id="dynamic-profile-view-target">
+                    </div>
+            </section>
+
+        </main>
+
+        <nav class="app-hotbar">
+            <div class="hotbar-navigation">
+                <button class="hotbar-tab active" id="tab-feed" onclick="switchActiveTab('feed')">
+                    <i class="fas fa-stream"></i>
+                    <span>Feed</span>
+                </button>
+                <button class="hotbar-tab" id="tab-leaderboard" onclick="switchActiveTab('leaderboard')">
+                    <i class="fas fa-trophy"></i>
+                    <span>Stats</span>
+                </button>
+                
+                <div class="hotbar-action-center">
+                    <button class="action-trigger-btn" onclick="openUploadModal(event)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+
+                <button class="hotbar-tab" id="tab-updates" onclick="switchActiveTab('updates')">
+                    <i class="fas fa-history"></i>
+                    <span>Memos</span>
+                </button>
+                <button class="hotbar-tab" id="tab-profile" onclick="switchActiveTab('profile')">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Profile</span>
                 </button>
             </div>
-        </aside>
-
-        <main class="main-content">
-            
-            <header class="app-hotbar">
-                <div class="hotbar-navigation">
-                    <button class="hotbar-tab active" id="tab-feed" onclick="switchActiveTab('feed')">
-                        <i class="fas fa-stream"></i> Stream Feed
-                    </button>
-                    <button class="hotbar-tab" id="tab-leaderboard" onclick="switchActiveTab('leaderboard')">
-                        <i class="fas fa-trophy"></i> Leaderboard
-                    </button>
-                    <button class="hotbar-tab" id="tab-updates" onclick="switchActiveTab('updates')">
-                        <i class="fas fa-history"></i> Memos
-                    </button>
-                    <button class="hotbar-tab" id="tab-profile" onclick="switchActiveTab('profile')">
-                        <i class="fas fa-user-cog"></i> Profile
-                    </button>
-                </div>
-
-                <div class="hotbar-actions">
-                    <button class="action-trigger-btn" onclick="openUploadModal(event)">
-                        <i class="fas fa-plus-circle"></i> Share Document
-                    </button>
-                </div>
-            </header>
-
-            <div class="workspace-stage">
-                
-                <!-- FEED VIEW -->
-                <section id="view-feed" class="tab-view-panel">
-                    <div class="filter-scroller-wrapper">
-                        <div class="filter-row" id="subject-filter-rack">
-                            <!-- Dynamic Filter Pills Rendered via App JS -->
-                        </div>
-                    </div>
-                    <div class="feed-grid-stream" id="social-feed-stream"></div>
-                </section>
-
-                <!-- LEADERBOARD ANALYTICS VIEW -->
-                <section id="view-leaderboard" class="tab-view-panel hidden">
-                    <div class="showcase-card shadow-card animate-card">
-                        <div class="showcase-header">
-                            <h3><i class="fas fa-chart-bar text-gold"></i> Hub Analytics</h3>
-                            <p>Who is carrying the crew storage?</p>
-                        </div>
-                        <div class="leaderboard-table-wrapper" style="padding: 1rem 2rem 2rem 2rem;">
-                            <div id="leaderboard-anchor-body" style="display: flex; flex-direction: column; gap: 12px;">
-                                <!-- Rendered dynamically with clean horizontal badges -->
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- MEMOS / WORKSPACE NOTES VIEW -->
-                <section id="view-updates" class="tab-view-panel hidden">
-                    <div class="showcase-card shadow-card animate-card">
-                        <div class="showcase-header">
-                            <h3><i class="fas fa-sticky-note"></i> Shared Workspace Notes</h3>
-                            <p>Quick memos, links, and updates for the group</p>
-                        </div>
-                        <div style="padding: 2rem;" id="workspace-notes-container">
-                            <!-- Dynamic Notice Board cards go here -->
-                        </div>
-                    </div>
-                </section>
-
-                <!-- CONFIGURATION / PROFILE MATRIX VIEW -->
-                <section id="view-profile" class="tab-view-panel hidden">
-                    <div id="dynamic-profile-view-target">
-                        <!-- Dynamic layout rendering matching image_d680c3.png safely -->
-                    </div>
-                </section>
-
-            </div>
-        </main>
+        </nav>
     </div>
 
-    <!-- UPLOAD PACKAGE MODAL -->
-    <div id="upload-modal" class="modal-overlay hidden">
-        <div class="modal-window">
+    <div id="upload-modal" class="modal-overlay hidden" onclick="closeUploadModal()">
+        <div class="modal-window" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <h3><i class="fas fa-cloud-upload-alt"></i> Stage Asset Attachment Package</h3>
+                <h3><i class="fas fa-cloud-upload-alt"></i> Stage Asset Package</h3>
                 <button class="close-modal-btn" onclick="closeUploadModal()">&times;</button>
             </div>
             <div class="modal-body-form">
@@ -181,7 +155,7 @@
                     <input type="text" id="modal-file-desc" placeholder="Optional context or comments">
                 </div>
 
-                <div class="input-group" style="margin-top: 10px;">
+                <div class="input-group" style="margin-top: 14px;">
                     <label class="file-dropzone-label">
                         <i class="fas fa-file-pdf"></i>
                         <span id="file-chosen-text">Tap to attach files/images</span>
@@ -189,12 +163,11 @@
                     </label>
                 </div>
                 <button id="modal-upload-btn" onclick="triggerSupabaseUploadPipeline()">Publish to Feed Stream 🚀</button>
-                <p id="upload-error" class="error-msg" style="text-align:center;"></p>
+                <p id="upload-error" class="error-msg" style="text-align:center; margin-top: 10px;"></p>
             </div>
         </div>
     </div>
 
-    <!-- LIGHTBOX THEATRE LAYOUT -->
     <div id="theatre-lightbox" class="theatre-overlay hidden" onclick="closeMediaTheatre()">
         <div class="theatre-window" onclick="event.stopPropagation()">
             <div class="theatre-navbar">
