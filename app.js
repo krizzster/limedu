@@ -7,7 +7,7 @@ const CONFIG = {
 
 // INITIALIZE SUPABASE STORAGE & DATABASE ENGINE SECURELY
 const supabaseUrl = 'https://unjdjduiqtldgoybgmnq.supabase.co';
-const supabaseKey = 'MTQ5ODU4Nzc5MDg4NjMwNTg5Mg.zLED9ARjTqSO16PILbhZ7r58EedhZR';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuamRqZHVpcXRsZGdveWJnbW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MzgzODEsImV4cCI6MjA5MzAxNDM4MX0.qMuQcBysiKuFD5ByoL17fs0KxClgI-FEyzyKYayNVdE';
 
 // Solves the double initialization namespace identifier crash safely
 let dbInstance = null;
