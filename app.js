@@ -29,7 +29,6 @@ const MATHS_CHAPTERS = [
 window.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('hubTheme') || 'light-mode';
     document.body.className = savedTheme;
-    if (typeof updateThemeToggleButton === 'function') updateThemeToggleButton(savedTheme);
     fetchStateFromSupabase();
 });
 
@@ -44,7 +43,6 @@ async function fetchStateFromSupabase() {
         const labelEl = document.getElementById('group-title-label');
         if (labelEl) labelEl.innerText = globalData.groupName || "The Hub";
         
-        // Re-authenticate if session is cached
         const cachedUser = localStorage.getItem('limeduUserKey');
         if (cachedUser && globalData.members[cachedUser]) {
             currentActiveFriendKey = cachedUser;
@@ -89,9 +87,9 @@ function bootSocialWorkspace() {
 
     const profile = globalData.members[currentActiveFriendKey];
     
-    const userEl = document.getElementById('current-user-name');
-    const classEl = document.getElementById('current-user-class');
-    const avatarEl = document.getElementById('current-user-avatar');
+    const userEl = document.getElementById('sidebar-display-name');
+    const classEl = document.getElementById('sidebar-current-class');
+    const avatarEl = document.getElementById('sidebar-user-avatar');
     const statusInp = document.getElementById('custom-status-input');
 
     if (userEl) userEl.innerText = profile.name;
@@ -100,6 +98,28 @@ function bootSocialWorkspace() {
     if (statusInp) statusInp.value = profile.status || "";
 
     renderFeedStream();
+    renderLeaderboardEngine();
+    renderWorkspaceMemos();
+    renderProfileManagementNode();
+}
+
+function switchActiveTab(tabKey) {
+    document.querySelectorAll('.tab-view-panel').forEach(panel => panel.classList.add('hidden'));
+    document.querySelectorAll('.hotbar-tab').forEach(tab => tab.classList.remove('active'));
+    
+    const targetPanel = document.getElementById(`view-${tabKey}`);
+    const targetTab = document.getElementById(`tab-${tabKey}`);
+    const badgeMode = document.getElementById('app-badge-mode');
+    
+    if (targetPanel) targetPanel.classList.remove('hidden');
+    if (targetTab) targetTab.classList.add('active');
+    
+    if (badgeMode) {
+        if (tabKey === 'feed') badgeMode.innerText = "FEED";
+        if (tabKey === 'leaderboard') badgeMode.innerText = "STATS";
+        if (tabKey === 'updates') badgeMode.innerText = "MEMOS";
+        if (tabKey === 'profile') badgeMode.innerText = "USER";
+    }
 }
 
 function renderSubjectFilters() {
@@ -108,22 +128,10 @@ function renderSubjectFilters() {
     
     const subjects = ["All", "Science", "English", "Social Science", "Hindi", "Maths", "Sanskrit", "Other"];
     container.innerHTML = subjects.map(sub => `
-        <button class="filter-tag ${selectedSubjectFilter === sub ? 'active' : ''}" onclick="applySubjectFilter('${sub}')">
-            <i class="fas ${getSubjectIcon(sub)}"></i> ${sub}
+        <button class="filter-pill ${selectedSubjectFilter === sub ? 'active' : ''}" onclick="applySubjectFilter('${sub}')">
+            ${sub === 'All' ? 'All Subjects' : sub}
         </button>
     `).join("");
-}
-
-function getSubjectIcon(sub) {
-    switch(sub) {
-        case 'Science': return 'fa-flask';
-        case 'English': return 'fa-book';
-        case 'Social Science': return 'fa-globe-americas';
-        case 'Hindi': return 'fa-language';
-        case 'Maths': return 'fa-calculator';
-        case 'Sanskrit': return 'fa-scroll';
-        default: return 'fa-folder-open';
-    }
 }
 
 function applySubjectFilter(sub) {
@@ -141,90 +149,136 @@ function renderFeedStream() {
         const member = globalData.members[memberKey];
         if (member.pdfs) {
             member.pdfs.forEach((item, index) => {
-                postsPool.push({ ...item, authorKey: memberKey, authorName: member.name, assetIndex: index });
+                postsPool.push({ ...item, authorKey: memberKey, authorName: member.name, authorStatus: member.status || "", assetIndex: index });
             });
         }
     }
 
     postsPool.sort((a, b) => new Date(b.date) - new Date(a.date));
     
-    const searchBar = document.getElementById('global-search-bar');
-    const searchVal = searchBar ? searchBar.value.toLowerCase() : "";
-    
     const elementsHtml = postsPool.filter(post => {
-        const matchesSubject = selectedSubjectFilter === "All" || post.subject === selectedSubjectFilter;
-        const matchesSearch = post.name.toLowerCase().includes(searchVal) || 
-                              post.authorName.toLowerCase().includes(searchVal) ||
-                              (post.metaInfo && post.metaInfo.toLowerCase().includes(searchVal));
-        return matchesSubject && matchesSearch;
+        return selectedSubjectFilter === "All" || post.subject === selectedSubjectFilter;
     }).map(post => {
         const isOwner = post.authorKey === currentActiveFriendKey;
-        return `
-            <div class="post-card animate-fade-in">
-                <div class="post-header">
-                    <div class="profile-avatar active">${post.authorName.charAt(0)}</div>
-                    <div class="post-meta-block">
-                        <div class="post-author-line">${post.authorName}</div>
-                        <div class="post-timestamp"><i class="far fa-clock"></i> ${post.date}</div>
+        
+        let visualPayloadContainer = "";
+        if (post.isImageSet && post.imagePayloads && post.imagePayloads.length > 0) {
+            visualPayloadContainer = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 12px;">
+                    ${post.imagePayloads.map(imgUrl => `
+                        <img src="${imgUrl}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 12px; cursor: pointer;" onclick="launchTheatreImageCarousel('${post.name.replace(/'/g, "\\'")}', ['${imgUrl}'])">
+                    `).join("")}
+                </div>
+            `;
+        } else {
+            visualPayloadContainer = `
+                <div class="pdf-attachment-anchor-link" style="margin-top: 12px;" onclick="launchTheatreStandalonePDF('${post.path}')">
+                    <i class="fas fa-file-pdf"></i>
+                    <div>
+                        <span style="display:block; font-weight:700;">${post.name}</span>
+                        <span style="font-size:0.75rem; color: var(--text-secondary);">${post.date} &middot; ${post.subject}</span>
                     </div>
-                    ${isOwner ? `
-                    <div class="post-actions-wrapper">
-                        <button class="post-actions-trigger-btn" onclick="toggleDropdownMenu(event, '${post.authorKey}', ${post.assetIndex})">
-                            <i class="fas fa-ellipsis-v"></i>
-                        </button>
-                        <div class="post-actions-dropdown-menu hidden" id="dropdown-${post.authorKey}-${post.assetIndex}">
-                            <button class="menu-action-btn delete" onclick="deleteAssetPipeline('${post.authorKey}', ${post.assetIndex})">
-                                <i class="far fa-trash-alt"></i> Remove Post
-                            </button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="showcase-card" style="padding: 1.5rem; margin-bottom: 1.25rem; border-radius: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <div class="avatar-frame" style="width:40px; height:40px; border-radius:50%; background: var(--social-blue-light); color: var(--social-blue);">
+                            ${post.authorName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h4 style="font-size: 0.95rem; font-weight:800;">${post.authorName}</h4>
+                            ${post.authorStatus ? `<span style="font-size:0.75rem; font-style:italic; color: var(--text-secondary);">"${post.authorStatus}"</span>` : ''}
                         </div>
                     </div>
+                    ${isOwner ? `
+                        <button class="delete-action-trigger-btn" onclick="deleteAssetPipeline('${post.authorKey}', ${post.assetIndex})">
+                            <i class="far fa-trash-alt"></i>
+                        </button>
                     ` : ''}
                 </div>
                 
-                <h2 class="post-title">${post.name}</h2>
-                <span class="subject-badge">${post.subject}</span>
-                ${post.metaInfo ? `<p class="post-desc">${post.metaInfo}</p>` : ''}
-
-                <div class="post-content-preview-canvas">
-                    ${post.isImageSet ? `
-                        <div class="post-preview-box" onclick="launchTheatreImageCarousel('${post.name.replace(/'/g, "\\'")}', ${JSON.stringify(post.imagePayloads).replace(/"/g, '&quot;')})">
-                            <img src="${post.imagePayloads[0]}" alt="Attachment preview">
-                            <div class="preview-counter-overlay"><i class="far fa-images"></i> Stack (${post.imagePayloads.length})</div>
-                        </div>
-                    ` : `
-                        <div class="post-preview-box" onclick="launchTheatreStandalonePDF('${post.path}')">
-                            <div class="pdf-preview-canvas-placeholder">
-                                <i class="fas fa-file-pdf"></i>
-                                <span>Preview Document Interface</span>
-                            </div>
-                        </div>
-                    `}
-                </div>
-
-                <div class="post-footer-actions">
-                    <a class="download-action-link" href="${post.path}" download target="_blank">
-                        <i class="fas fa-download"></i> Get File Reference
-                    </a>
-                </div>
+                ${post.metaInfo ? `<p style="margin-top: 12px; font-size: 0.9rem; font-weight: 500; color: var(--text-secondary);">${post.metaInfo}</p>` : ''}
+                ${visualPayloadContainer}
             </div>
         `;
     }).join("");
 
-    stream.innerHTML = elementsHtml || `<div style="text-align:center; padding: 3rem; color: var(--text-secondary); font-weight:700;"><i class="fas fa-comment-slash" style="font-size:2rem; margin-bottom:1rem; display:block;"></i>No classroom posts match this category query yet.</div>`;
+    stream.innerHTML = elementsHtml || `<div style="text-align:center; padding: 3rem; color: var(--text-secondary); font-weight:700;">No shared assignments or assets here.</div>`;
 }
 
-function toggleDropdownMenu(e, userKey, idx) {
-    e.stopPropagation();
-    const targetMenu = document.getElementById(`dropdown-${userKey}-${idx}`);
-    document.querySelectorAll('.post-actions-dropdown-menu').forEach(menu => {
-        if (menu !== targetMenu) menu.classList.add('hidden');
-    });
-    if(targetMenu) targetMenu.classList.toggle('hidden');
+function renderLeaderboardEngine() {
+    const container = document.getElementById('leaderboard-anchor-body');
+    if (!container) return;
+
+    let rankingData = [];
+    for (const key in globalData.members) {
+        const m = globalData.members[key];
+        rankingData.push({
+            name: m.name,
+            count: m.pdfs ? m.pdfs.length : 0
+        });
+    }
+
+    rankingData.sort((a, b) => b.count - a.count);
+
+    container.innerHTML = rankingData.map((user, idx) => `
+        <div style="display:flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius:14px; border: 1px solid var(--border-soft);">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="font-weight:800; color: var(--social-blue);">#${idx + 1}</span>
+                <span style="font-weight:700;">${user.name}</span>
+            </div>
+            <span class="subject-badge" style="background: var(--social-blue-light); color: var(--social-blue); font-weight:800; border-radius:8px;">${user.count} shares</span>
+        </div>
+    `).join("");
 }
 
-window.addEventListener('click', () => {
-    document.querySelectorAll('.post-actions-dropdown-menu').forEach(menu => menu.classList.add('hidden'));
-});
+function renderWorkspaceMemos() {
+    const target = document.getElementById('workspace-notes-container');
+    if (!target) return;
+    
+    const currentNoticeText = globalData.workspaceNotice || "Welcome to the upgraded workspace. Use the central publish tool to instantly share multi-image configurations or document assignments directly categorized by chapters and book pages.";
+    
+    target.innerHTML = `
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-soft); border-radius:16px; padding: 1.5rem;">
+            <h4 style="font-weight:800; font-size:1.1rem; margin-bottom:8px;">Notice Board</h4>
+            <p style="font-size:0.9rem; color: var(--text-secondary); line-height:1.5; font-weight:500;">${currentNoticeText}</p>
+        </div>
+    `;
+}
+
+function renderProfileManagementNode() {
+    const target = document.getElementById('dynamic-profile-view-target');
+    if (!target) return;
+
+    const profile = globalData.members[currentActiveFriendKey];
+    if (!profile) return;
+
+    target.innerHTML = `
+        <div class="showcase-card shadow-card" style="padding: 2.5rem; text-align: center; display: flex; flex-direction: column; align-items: center;">
+            <div class="avatar-frame" style="width: 90px; height: 90px; border-radius: 50%; font-size: 2.5rem; background: #ff5e7e; color: white; margin-bottom: 1rem; box-shadow: 0 8px 20px rgba(255,94,126,0.25);">
+                ${profile.name.substring(0, 2).toUpperCase()}
+            </div>
+            <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 4px;">${profile.name}</h2>
+            <span class="subject-badge" style="background: rgba(255,255,255,0.08); color: var(--text-secondary); font-weight: 700; padding: 4px 12px; font-size:0.8rem;">${profile.currentClass || '7D'}</span>
+            
+            <div style="width: 100%; max-width: 400px; text-align: left; margin-top: 2rem; background: rgba(0,0,0,0.02); padding: 1.25rem; border-radius: 16px; border: 1px solid var(--border-soft);">
+                <label style="font-size: 0.75rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; display:block; margin-bottom: 8px;">Your Current Status:</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="profile-direct-status-input" value="${profile.status || ''}" style="flex:1; padding: 12px; border-radius:10px; border: 1px solid var(--border-soft); background: var(--hub-bg); color: var(--text-primary); font-weight:600;" placeholder="Set personal context status...">
+                    <button onclick="syncProfileDirectStatus()" style="background: #ff5e7e; color: white; border: none; padding: 0 16px; border-radius: 10px; cursor: pointer; font-weight:800;"><i class="fas fa-check"></i></button>
+                </div>
+            </div>
+
+            <button onclick="logOutSession()" style="margin-top: 2rem; width: 100%; max-width: 400px; padding: 14px; border-radius: 12px; border: 1px solid var(--border-soft); background: transparent; color: #ef4444; font-weight: 800; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <i class="fas fa-sign-out-alt"></i> Log Out of Hub
+            </button>
+        </div>
+    `;
+}
 
 async function syncCustomStatus() {
     const text = document.getElementById('custom-status-input').value.trim();
@@ -232,10 +286,29 @@ async function syncCustomStatus() {
     try {
         await dbInstance.from('hub_state').update({ payload: globalData }).eq('id', 1);
         bootSocialWorkspace();
-        alert("Status updated live on classroom board! 💬");
     } catch (err) {
         console.error("Status Sync Breakdown:", err);
     }
+}
+
+async function syncProfileDirectStatus() {
+    const input = document.getElementById('profile-direct-status-input');
+    if (input) {
+        globalData.members[currentActiveFriendKey].status = input.value.trim();
+        try {
+            await dbInstance.from('hub_state').update({ payload: globalData }).eq('id', 1);
+            bootSocialWorkspace();
+            alert("Status synced successfully across the framework!");
+        } catch (err) {
+            console.error(err);
+        }
+    }
+}
+
+function logOutSession() {
+    localStorage.removeItem('limeduUserKey');
+    currentActiveFriendKey = "";
+    location.reload();
 }
 
 function handleSubjectChange() {
@@ -291,7 +364,7 @@ async function triggerSupabaseUploadPipeline() {
             name: title,
             metaInfo: chapterVal ? `${chapterVal} — ${desc}` : desc,
             subject: subject,
-            date: new Date().toLocaleString(),
+            date: new Date().toLocaleDateString('en-CA'),
             path: pathsArray[0],
             isImageSet: isImageSet,
             imagePayloads: isImageSet ? pathsArray : []
@@ -305,13 +378,12 @@ async function triggerSupabaseUploadPipeline() {
         await dbInstance.from('hub_state').update({ payload: globalData }).eq('id', 1);
         
         closeUploadModal();
-        
         document.getElementById('modal-file-title').value = '';
         document.getElementById('modal-file-desc').value = '';
         fileInp.value = '';
         document.getElementById('file-chosen-text').innerText = 'Tap to attach files/images';
         
-        renderFeedStream();
+        bootSocialWorkspace();
     } catch (err) {
         console.error(err);
         if (errEl) errEl.innerText = "🚨 Pipeline fault encountered during storage write.";
@@ -327,7 +399,7 @@ async function deleteAssetPipeline(userKey, index) {
     try {
         globalData.members[userKey].pdfs.splice(index, 1);
         await dbInstance.from('hub_state').update({ payload: globalData }).eq('id', 1);
-        renderFeedStream();
+        bootSocialWorkspace();
     } catch (err) {
         console.error("Deletion Fault:", err);
     } finally {
@@ -338,7 +410,7 @@ async function deleteAssetPipeline(userKey, index) {
 function launchTheatreImageCarousel(title, payloads) {
     const view = document.getElementById('theatre-view-viewport');
     document.getElementById('theatre-filename-label').innerText = title;
-    view.innerHTML = payloads.map(p => `<img src="${p}" style="max-width:100%; max-height:75vh; border-radius:12px; margin-bottom:1rem; object-fit:contain;">`).join("");
+    view.innerHTML = payloads.map(p => `<img src="${p}" style="max-width:100%; max-height:75vh; border-radius:12px; object-fit:contain;">`).join("");
     document.getElementById('theatre-lightbox').classList.remove('hidden');
 }
 
@@ -353,5 +425,5 @@ function closeMediaTheatre() { document.getElementById('theatre-lightbox').class
 function openUploadModal(e) { if(e) e.preventDefault(); document.getElementById('upload-modal').classList.remove('hidden'); }
 function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); if(document.getElementById('upload-error')) document.getElementById('upload-error').innerText = ''; }
 function toggleMainLoader(show, label = "") { const loader = document.getElementById('loader-container'); if(loader) { if(show){ loader.classList.remove('hidden'); document.getElementById('loader-text').innerText = label; } else { loader.classList.add('hidden'); } } }
-function toggleTheme() { const isDark = document.body.classList.toggle('dark-mode'); localStorage.setItem('hubTheme', isDark ? 'dark-mode' : 'light-mode'); if (typeof updateThemeToggleButton === 'function') updateThemeToggleButton(isDark ? 'dark-mode' : 'light-mode'); }
+function toggleTheme() { const isDark = document.body.classList.toggle('dark-mode'); localStorage.setItem('hubTheme', isDark ? 'dark-mode' : 'light-mode'); }
 function updateFileLabel() { const inp = document.getElementById('modal-file-input'); if(inp && inp.files.length > 0) document.getElementById('file-chosen-text').innerText = `${inp.files.length} attachment(s) locked`; }

@@ -16,7 +16,7 @@
 
     <div id="login-container" class="login-wrapper">
         <div class="card security-card">
-            <div class="lock-icon">🎒</div>
+            <div class="lock-icon">🔒</div>
             <h2>limedu Portal</h2>
             <p>Connect with your hub workspace</p>
             <div class="input-group">
@@ -36,10 +36,10 @@
         
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <div class="brand-avatar">📚</div>
+                <div class="brand-avatar">🏫</div>
                 <div class="brand-meta">
-                    <span class="brand-name">limedu</span>
-                    <span class="brand-badge">Crew Node</span>
+                    <span class="brand-name" id="group-title-label">limedu</span>
+                    <span class="brand-badge" id="app-badge-mode">FEED</span>
                 </div>
             </div>
 
@@ -54,8 +54,8 @@
             <div class="interactive-status-box">
                 <label><i class="fas fa-comment-dots"></i> Broadcast Status</label>
                 <div class="status-input-wrapper">
-                    <input type="text" id="interactive-status-input" placeholder="What are you working on?">
-                    <button onclick="updateInteractiveStatus()" title="Sync status across the hub"><i class="fas fa-paper-plane"></i></button>
+                    <input type="text" id="custom-status-input" placeholder="What are you working on?">
+                    <button onclick="syncCustomStatus()" title="Sync status across the hub"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
 
@@ -85,10 +85,10 @@
                         <i class="fas fa-trophy"></i> Leaderboard
                     </button>
                     <button class="hotbar-tab" id="tab-updates" onclick="switchActiveTab('updates')">
-                        <i class="fas fa-history"></i> Sync Updates
+                        <i class="fas fa-history"></i> Memos
                     </button>
                     <button class="hotbar-tab" id="tab-profile" onclick="switchActiveTab('profile')">
-                        <i class="fas fa-user-cog"></i> Configuration Engine
+                        <i class="fas fa-user-cog"></i> Profile
                     </button>
                 </div>
 
@@ -101,79 +101,48 @@
 
             <div class="workspace-stage">
                 
+                <!-- FEED VIEW -->
                 <section id="view-feed" class="tab-view-panel">
                     <div class="filter-scroller-wrapper">
-                        <div class="filter-row">
-                            <button class="filter-pill active" onclick="filterFeedBySubject('All', this)">All Feeds</button>
-                            <button class="filter-pill" onclick="filterFeedBySubject('Science', this)">Science</button>
-                            <button class="filter-pill" onclick="filterFeedBySubject('English', this)">English</button>
-                            <button class="filter-pill" onclick="filterFeedBySubject('Social Science', this)">Social Science</button>
-                            <button class="filter-pill" onclick="filterFeedBySubject('Hindi', this)">Hindi</button>
-                            <button class="filter-pill" onclick="filterFeedBySubject('Maths', this)">Maths</button>
-                            <button class="filter-pill" onclick="filterFeedBySubject('Sanskrit', this)">Sanskrit</button>
-                            <button class="filter-pill" onclick="filterFeedBySubject('Other', this)">Other Assets</button>
+                        <div class="filter-row" id="subject-filter-rack">
+                            <!-- Dynamic Filter Pills Rendered via App JS -->
                         </div>
                     </div>
-
-                    <div class="feed-grid-stream" id="feed-stream-anchor">
-                        </div>
+                    <div class="feed-grid-stream" id="social-feed-stream"></div>
                 </section>
 
+                <!-- LEADERBOARD ANALYTICS VIEW -->
                 <section id="view-leaderboard" class="tab-view-panel hidden">
                     <div class="showcase-card shadow-card animate-card">
                         <div class="showcase-header">
-                            <h3><i class="fas fa-medal text-gold"></i> Peer Network Standings</h3>
-                            <p>Global assignment payload count across active database entries.</p>
+                            <h3><i class="fas fa-chart-bar text-gold"></i> Hub Analytics</h3>
+                            <p>Who is carrying the crew storage?</p>
                         </div>
-                        <div class="leaderboard-table-wrapper">
-                            <table class="leaderboard-table">
-                                <thead>
-                                    <tr>
-                                        <th>Rank</th>
-                                        <th>Workspace Operator</th>
-                                        <th>Current Class</th>
-                                        <th>Uploaded Assets</th>
-                                        <th>Operational Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="leaderboard-anchor-body">
-                                    </tbody>
-                            </table>
+                        <div class="leaderboard-table-wrapper" style="padding: 1rem 2rem 2rem 2rem;">
+                            <div id="leaderboard-anchor-body" style="display: flex; flex-direction: column; gap: 12px;">
+                                <!-- Rendered dynamically with clean horizontal badges -->
+                            </div>
                         </div>
                     </div>
                 </section>
 
+                <!-- MEMOS / WORKSPACE NOTES VIEW -->
                 <section id="view-updates" class="tab-view-panel hidden">
                     <div class="showcase-card shadow-card animate-card">
                         <div class="showcase-header">
-                            <h3><i class="fas fa-terminal text-accent"></i> Core Network Sync Logs</h3>
-                            <p>Real-time terminal traces logging structural handshakes with storage and database nodes.</p>
+                            <h3><i class="fas fa-sticky-note"></i> Shared Workspace Notes</h3>
+                            <p>Quick memos, links, and updates for the group</p>
                         </div>
-                        <div class="terminal-log-console" id="terminal-sync-logs">
-                            <div class="log-line text-green">[SYSTEM SYSTEM INITIALIZED SUCCESS] Handshake with workspace active. Ready to listen to transaction updates.</div>
+                        <div style="padding: 2rem;" id="workspace-notes-container">
+                            <!-- Dynamic Notice Board cards go here -->
                         </div>
                     </div>
                 </section>
 
+                <!-- CONFIGURATION / PROFILE MATRIX VIEW -->
                 <section id="view-profile" class="tab-view-panel hidden">
-                    <div class="showcase-card shadow-card animate-card">
-                        <div class="showcase-header">
-                            <h3><i class="fas fa-tools"></i> Configuration Engine & Workspace Environment</h3>
-                            <p>Adjust variables associated with the active cloud environment node instance.</p>
-                        </div>
-                        <div class="profiler-settings-grid">
-                            <div class="setting-item-node">
-                                <h4>Environment Engine Endpoints</h4>
-                                <p>Supabase Data Gateway URL Instance Frame:</p>
-                                <input type="text" value="https://unjdjduiqtldgoybgmnq.supabase.co" readonly class="locked-endpoint-input">
-                            </div>
-                            <div class="setting-item-node">
-                                <h4>Active Profile Matrix Signature</h4>
-                                <p>Operational user metadata payload string signature:</p>
-                                <div class="profile-details-panel" id="profile-meta-inspector-card">
-                                    </div>
-                            </div>
-                        </div>
+                    <div id="dynamic-profile-view-target">
+                        <!-- Dynamic layout rendering matching image_d680c3.png safely -->
                     </div>
                 </section>
 
@@ -181,6 +150,7 @@
         </main>
     </div>
 
+    <!-- UPLOAD PACKAGE MODAL -->
     <div id="upload-modal" class="modal-overlay hidden">
         <div class="modal-window">
             <div class="modal-header">
@@ -190,7 +160,7 @@
             <div class="modal-body-form">
                 <div class="input-group">
                     <label>Assignment Label / Description Name</label>
-                    <input type="text" id="modal-file-name" placeholder="E.g., Surface Area Chapter Notes">
+                    <input type="text" id="modal-file-title" placeholder="E.g., Surface Area Chapter Notes">
                 </div>
                 <div class="input-group">
                     <label>Subject Category</label>
@@ -206,7 +176,12 @@
                 </div>
                 <div id="dynamic-subcategories-wrapper"></div>
                 
-                <div class="input-group">
+                <div class="input-group" style="margin-top: 10px;">
+                    <label>Additional Notes Context</label>
+                    <input type="text" id="modal-file-desc" placeholder="Optional context or comments">
+                </div>
+
+                <div class="input-group" style="margin-top: 10px;">
                     <label class="file-dropzone-label">
                         <i class="fas fa-file-pdf"></i>
                         <span id="file-chosen-text">Tap to attach files/images</span>
@@ -219,6 +194,7 @@
         </div>
     </div>
 
+    <!-- LIGHTBOX THEATRE LAYOUT -->
     <div id="theatre-lightbox" class="theatre-overlay hidden" onclick="closeMediaTheatre()">
         <div class="theatre-window" onclick="event.stopPropagation()">
             <div class="theatre-navbar">
