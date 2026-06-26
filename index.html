@@ -3,121 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>limedu | Classroom Hub</title>
+    <title>limedu | Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="light-mode">
 
-    <!-- Sync Screen Loader Canvas -->
     <div id="loader-container" class="hidden">
         <div class="spinner"></div>
-        <p class="loading-text" id="loader-text">Syncing with limedu Feed...</p>
+        <p class="loading-text" id="loader-text">Syncing with limedu Core...</p>
     </div>
 
-    <!-- Social Authentication Entry Gate -->
-    <div id="login-container" class="login-wrapper fade-in">
-        <div class="social-login-card">
-            <div class="brand-mascot">🎒</div>
-            <h2>limedu Crew</h2>
-            <p>Jump back into your friend hub</p>
-            <div class="input-field-group">
-                <i class="fas fa-user-tag"></i>
+    <div id="login-container" class="login-wrapper">
+        <div class="card security-card">
+            <div class="lock-icon">🎒</div>
+            <h2>limedu Portal</h2>
+            <p>Connect with your hub workspace</p>
+            <div class="input-group">
+                <i class="fas fa-user-shield"></i>
                 <input type="text" id="username" placeholder="Your Full Name" required>
             </div>
-            <div class="input-field-group">
-                <i class="fas fa-lock"></i>
-                <input type="password" id="password" placeholder="Passcode Key" required>
+            <div class="input-group">
+                <i class="fas fa-key"></i>
+                <input type="password" id="password" placeholder="Passcode Entry Key" required>
             </div>
-            <button id="login-btn" onclick="handleLogin()">Enter Workspace <i class="fas fa-arrow-right"></i></button>
+            <button id="login-btn" onclick="handleLogin()">Authorized Session Boot 🚀</button>
             <p id="login-error" class="error-msg"></p>
         </div>
     </div>
 
-    <!-- Active Workspace Engine -->
     <div id="app-container" class="app-layout hidden">
         
-        <!-- Left Side Controller Column -->
-        <aside class="sidebar-panel">
-            <div class="hub-header">
-                <span class="hub-icon">✨</span>
-                <div class="hub-branding">
-                    <h1 id="group-title-label">The Hub</h1>
-                    <span class="workspace-badge">Active Station</span>
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-avatar">📚</div>
+                <div class="brand-meta">
+                    <span class="brand-name">limedu</span>
+                    <span class="brand-badge">Crew Node</span>
                 </div>
             </div>
 
-            <!-- Profile Interactive Status Deck -->
-            <div class="current-user-card">
-                <div class="profile-avatar" id="current-user-avatar">?</div>
-                <div class="profile-details">
-                    <h3 id="current-user-name">Loading...</h3>
-                    <span id="current-user-class">Class --</span>
+            <div class="user-profile-badge">
+                <div class="avatar-frame" id="sidebar-user-avatar">?</div>
+                <div class="profile-meta">
+                    <h4 id="sidebar-display-name">Active Session</h4>
+                    <span id="sidebar-current-class">Class Member</span>
                 </div>
             </div>
 
-            <div class="status-config-box">
-                <label><i class="fas fa-comment-dots"></i> Update Broadcast</label>
-                <div class="status-input-row">
-                    <input type="text" id="custom-status-input" placeholder="What are you working on?">
-                    <button onclick="syncCustomStatus()"><i class="fas fa-paper-plane"></i></button>
+            <div class="interactive-status-box">
+                <label><i class="fas fa-comment-dots"></i> Broadcast Status</label>
+                <div class="status-input-wrapper">
+                    <input type="text" id="interactive-status-input" placeholder="What are you working on?">
+                    <button onclick="updateInteractiveStatus()" title="Sync status across the hub"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
 
-            <!-- Subject Shortcut Nav List -->
-            <nav class="hub-navigation">
-                <span class="menu-label">Subject Portals</span>
-                <div class="filter-row" id="subject-filter-rack">
-                    <!-- Dynamic subject buttons render here -->
+            <div class="sys-widget">
+                <div class="widget-header">
+                    <span><i class="fas fa-server"></i> System Core Status</span>
+                    <span class="pulse-indicator"></span>
                 </div>
-            </nav>
+                <p id="system-status-text">Connected to Supabase Node</p>
+            </div>
 
-            <div class="sidebar-action-footer">
-                <button class="utility-pill-btn" id="theme-toggle" onclick="toggleTheme()">
-                    <i class="fas fa-moon"></i> Dark Mode
+            <div class="sidebar-footer">
+                <button id="theme-toggle" class="footer-action-btn" onclick="toggleTheme()">
+                    <i class="fas fa-moon"></i> Dark UI
                 </button>
             </div>
         </aside>
 
-        <!-- Main Center Stream Workspace -->
-        <main class="main-stream-area">
-            <header class="stream-header-bar">
-                <div class="search-wrapper">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="global-search-bar" oninput="renderFeedStream()" placeholder="Search documents, configurations, or friends...">
+        <main class="main-content">
+            
+            <header class="app-hotbar">
+                <div class="hotbar-navigation">
+                    <button class="hotbar-tab active" id="tab-feed" onclick="switchActiveTab('feed')">
+                        <i class="fas fa-stream"></i> Stream Feed
+                    </button>
+                    <button class="hotbar-tab" id="tab-leaderboard" onclick="switchActiveTab('leaderboard')">
+                        <i class="fas fa-trophy"></i> Leaderboard
+                    </button>
+                    <button class="hotbar-tab" id="tab-updates" onclick="switchActiveTab('updates')">
+                        <i class="fas fa-history"></i> Sync Updates
+                    </button>
+                    <button class="hotbar-tab" id="tab-profile" onclick="switchActiveTab('profile')">
+                        <i class="fas fa-user-cog"></i> Configuration Engine
+                    </button>
+                </div>
+
+                <div class="hotbar-actions">
+                    <button class="action-trigger-btn" onclick="openUploadModal(event)">
+                        <i class="fas fa-plus-circle"></i> Share Document
+                    </button>
                 </div>
             </header>
 
-            <!-- Social Feed Stream Context Container -->
-            <section class="feed-canvas" id="social-feed-stream">
-                <!-- Interactive social post components mount here dynamically -->
-            </section>
-        </main>
+            <div class="workspace-stage">
+                
+                <section id="view-feed" class="tab-view-panel">
+                    <div class="filter-scroller-wrapper">
+                        <div class="filter-row">
+                            <button class="filter-pill active" onclick="filterFeedBySubject('All', this)">All Feeds</button>
+                            <button class="filter-pill" onclick="filterFeedBySubject('Science', this)">Science</button>
+                            <button class="filter-pill" onclick="filterFeedBySubject('English', this)">English</button>
+                            <button class="filter-pill" onclick="filterFeedBySubject('Social Science', this)">Social Science</button>
+                            <button class="filter-pill" onclick="filterFeedBySubject('Hindi', this)">Hindi</button>
+                            <button class="filter-pill" onclick="filterFeedBySubject('Maths', this)">Maths</button>
+                            <button class="filter-pill" onclick="filterFeedBySubject('Sanskrit', this)">Sanskrit</button>
+                            <button class="filter-pill" onclick="filterFeedBySubject('Other', this)">Other Assets</button>
+                        </div>
+                    </div>
 
-        <!-- Pinned Interaction Bottom Bar -->
-        <div class="interaction-hotbar">
-            <button class="hotbar-action-node primary" onclick="openUploadModal(event)">
-                <i class="fas fa-plus"></i> Share Asset
-            </button>
-        </div>
+                    <div class="feed-grid-stream" id="feed-stream-anchor">
+                        </div>
+                </section>
+
+                <section id="view-leaderboard" class="tab-view-panel hidden">
+                    <div class="showcase-card shadow-card animate-card">
+                        <div class="showcase-header">
+                            <h3><i class="fas fa-medal text-gold"></i> Peer Network Standings</h3>
+                            <p>Global assignment payload count across active database entries.</p>
+                        </div>
+                        <div class="leaderboard-table-wrapper">
+                            <table class="leaderboard-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Workspace Operator</th>
+                                        <th>Current Class</th>
+                                        <th>Uploaded Assets</th>
+                                        <th>Operational Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leaderboard-anchor-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="view-updates" class="tab-view-panel hidden">
+                    <div class="showcase-card shadow-card animate-card">
+                        <div class="showcase-header">
+                            <h3><i class="fas fa-terminal text-accent"></i> Core Network Sync Logs</h3>
+                            <p>Real-time terminal traces logging structural handshakes with storage and database nodes.</p>
+                        </div>
+                        <div class="terminal-log-console" id="terminal-sync-logs">
+                            <div class="log-line text-green">[SYSTEM SYSTEM INITIALIZED SUCCESS] Handshake with workspace active. Ready to listen to transaction updates.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="view-profile" class="tab-view-panel hidden">
+                    <div class="showcase-card shadow-card animate-card">
+                        <div class="showcase-header">
+                            <h3><i class="fas fa-tools"></i> Configuration Engine & Workspace Environment</h3>
+                            <p>Adjust variables associated with the active cloud environment node instance.</p>
+                        </div>
+                        <div class="profiler-settings-grid">
+                            <div class="setting-item-node">
+                                <h4>Environment Engine Endpoints</h4>
+                                <p>Supabase Data Gateway URL Instance Frame:</p>
+                                <input type="text" value="https://unjdjduiqtldgoybgmnq.supabase.co" readonly class="locked-endpoint-input">
+                            </div>
+                            <div class="setting-item-node">
+                                <h4>Active Profile Matrix Signature</h4>
+                                <p>Operational user metadata payload string signature:</p>
+                                <div class="profile-details-panel" id="profile-meta-inspector-card">
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
     </div>
 
-    <!-- Resource Publisher Panel Modal Drawer -->
-    <div id="upload-modal" class="modal-overlay hidden" onclick="closeUploadModal()">
-        <div class="modal-window" onclick="event.stopPropagation()">
-            <div class="modal-drag-handle"></div>
+    <div id="upload-modal" class="modal-overlay hidden">
+        <div class="modal-window">
             <div class="modal-header">
-                <h3><i class="fas fa-cloud-upload-alt"></i> Share New Asset</h3>
+                <h3><i class="fas fa-cloud-upload-alt"></i> Stage Asset Attachment Package</h3>
                 <button class="close-modal-btn" onclick="closeUploadModal()">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body-form">
                 <div class="input-group">
-                    <label>Resource Title</label>
-                    <input type="text" id="modal-file-title" placeholder="e.g., Biology Lab Framework, Math Test Pack">
-                </div>
-                <div class="input-group">
-                    <label>Description Note</label>
-                    <input type="text" id="modal-file-desc" placeholder="Add custom context for your friends...">
+                    <label>Assignment Label / Description Name</label>
+                    <input type="text" id="modal-file-name" placeholder="E.g., Surface Area Chapter Notes">
                 </div>
                 <div class="input-group">
                     <label>Subject Category</label>
@@ -146,7 +219,6 @@
         </div>
     </div>
 
-    <!-- Media Immersion Lightbox Overlay -->
     <div id="theatre-lightbox" class="theatre-overlay hidden" onclick="closeMediaTheatre()">
         <div class="theatre-window" onclick="event.stopPropagation()">
             <div class="theatre-navbar">
