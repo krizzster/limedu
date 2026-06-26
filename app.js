@@ -7,7 +7,6 @@ const CONFIG = {
 
 // INITIALIZE SUPABASE STORAGE & DATABASE ENGINE SECURELY
 const supabaseUrl = 'https://unjdjduiqtldgoybgmnq.supabase.co';
-// Make sure to double check this matches your exact copied anon public key from Supabase Dashboard -> Settings -> API Subtab!
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuamRqcHVpcXRsZGdveWJnbW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDAsImV4cCI6MjA0MH0.YOUR_UPDATED_SIGNATURE_KEY_HERE';
 
 let dbInstance = null;
@@ -139,9 +138,7 @@ function renderFeedStream() {
         }
     }
 
-    // Sort chronologically (newest social updates top)
     postsPool.sort((a, b) => new Date(b.date) - new Date(a.date));
-
     const searchVal = document.getElementById('global-search-bar').value.toLowerCase();
     
     const elementsHtml = postsPool.filter(post => {
@@ -180,7 +177,7 @@ function renderFeedStream() {
 
                 <div class="post-content-preview-canvas">
                     ${post.isImageSet ? `
-                        <div class="post-preview-box" onclick="launchTheatreImageCarousel('${post.name}', ${JSON.stringify(post.imagePayloads).replace(/"/g, '&quot;')})">
+                        <div class="post-preview-box" onclick="launchTheatreImageCarousel('${post.name.replace(/'/g, "\\'")}', ${JSON.stringify(post.imagePayloads).replace(/"/g, '&quot;')})">
                             <img src="${post.imagePayloads[0]}" alt="Attachment preview">
                             <div class="preview-counter-overlay"><i class="far fa-images"></i> Stack (${post.imagePayloads.length})</div>
                         </div>
@@ -203,7 +200,7 @@ function renderFeedStream() {
         `;
     }).join("");
 
-    stream.innerHTML = elementsHtml || `<div style="text-align:center; padding: 3rem; color: var(--text-secondary); font-weight:700;"><i class="fas fa-mailbox-bubble" style="font-size:2rem; margin-bottom:1rem; display:block;"></i>No classroom posts match this category query yet.</div>`;
+    stream.innerHTML = elementsHtml || `<div style="text-align:center; padding: 3rem; color: var(--text-secondary); font-weight:700;"><i class="fas fa-comment-slash" style="font-size:2rem; margin-bottom:1rem; display:block;"></i>No classroom posts match this category query yet.</div>`;
 }
 
 function toggleDropdownMenu(e, userKey, idx) {
@@ -222,16 +219,112 @@ window.addEventListener('click', () => {
 async function syncCustomStatus() {
     const text = document.getElementById('custom-status-input').value.trim();
     globalData.members[currentActiveFriendKey].status = text;
-    
     try {
         await dbInstance.from('hub_state').update({ payload: globalData }).eq('id', 1);
+        bootSocialWorkspace();
         alert("Status updated live on classroom board! 💬");
     } catch (err) {
         console.error("Status Sync Breakdown:", err);
     }
 }
 
-// Lightbox Window management
+function handleSubjectChange() {
+    const sub = document.getElementById('modal-file-subject').value;
+    const wrapper = document.getElementById('dynamic-subcategories-wrapper');
+    if (sub === 'Maths') {
+        wrapper.innerHTML = `
+            <div class="input-group">
+                <label>Chapter Context</label>
+                <select id="modal-file-chapter">
+                    ${MATHS_CHAPTERS.map(ch => `<option value="${ch}">${ch}</option>`).join("")}
+                </select>
+            </div>`;
+    } else {
+        wrapper.innerHTML = '';
+    }
+}
+
+async function triggerSupabaseUploadPipeline() {
+    const title = document.getElementById('modal-file-title').value.trim();
+    const desc = document.getElementById('modal-file-desc').value.trim();
+    const subject = document.getElementById('modal-file-subject').value;
+    const fileInp = document.getElementById('modal-file-input');
+    const errEl = document.getElementById('upload-error');
+    
+    if (!title || fileInp.files.length === 0) {
+        errEl.innerText = "🚨 Asset title and file payload parameters required.";
+        return;
+    }
+
+    toggleMainLoader(true, "Publishing to Feed Stream...");
+    try {
+        const files = Array.from(fileInp.files);
+        const isImageSet = files.every(f => f.type.startsWith('image/'));
+        let pathsArray = [];
+
+        for (const file of files) {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+            const { data, error } = await dbInstance.storage.from('limedu-assets').upload(`public/${fileName}`, file);
+            if (error) throw error;
+
+            const { data: urlData } = dbInstance.storage.from('limedu-assets').getPublicUrl(`public/${fileName}`);
+            pathsArray.push(urlData.publicUrl);
+        }
+
+        let chapterVal = "";
+        if (subject === 'Maths' && document.getElementById('modal-file-chapter')) {
+            chapterVal = document.getElementById('modal-file-chapter').value;
+        }
+
+        const newPost = {
+            name: title,
+            metaInfo: chapterVal ? `${chapterVal} — ${desc}` : desc,
+            subject: subject,
+            date: new Date().toLocaleString(),
+            path: pathsArray[0],
+            isImageSet: isImageSet,
+            imagePayloads: isImageSet ? pathsArray : []
+        };
+
+        if (!globalData.members[currentActiveFriendKey].pdfs) {
+            globalData.members[currentActiveFriendKey].pdfs = [];
+        }
+        globalData.members[currentActiveFriendKey].pdfs.push(newPost);
+
+        await dbInstance.from('hub_state').update({ payload: globalData }).eq('id', 1);
+        
+        closeUploadModal();
+        // Reset inputs
+        document.getElementById('modal-file-title').value = '';
+        document.getElementById('modal-file-desc').value = '';
+        fileInp.value = '';
+        document.getElementById('file-chosen-text').innerText = 'Tap to attach files/images';
+        
+        renderFeedStream();
+    } catch (err) {
+        console.error(err);
+        errEl.innerText = "🚨 Pipeline fault encountered during storage write.";
+    } finally {
+        toggleMainLoader(false);
+    }
+}
+
+async function deleteAssetPipeline(userKey, index) {
+    if (!confirm("Are you sure you want to drop this asset post from the feed timeline?")) return;
+    
+    toggleMainLoader(true, "Removing Post...");
+    try {
+        globalData.members[userKey].pdfs.splice(index, 1);
+        await dbInstance.from('hub_state').update({ payload: globalData }).eq('id', 1);
+        renderFeedStream();
+    } catch (err) {
+        console.error("Deletion Fault:", err);
+    } finally {
+        toggleMainLoader(false);
+    }
+}
+
 function launchTheatreImageCarousel(title, payloads) {
     const view = document.getElementById('theatre-view-viewport');
     document.getElementById('theatre-filename-label').innerText = title;
@@ -248,7 +341,7 @@ function launchTheatreStandalonePDF(url) {
 
 function closeMediaTheatre() { document.getElementById('theatre-lightbox').classList.add('hidden'); }
 function openUploadModal(e) { if(e) e.preventDefault(); document.getElementById('upload-modal').classList.remove('hidden'); }
-function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); }
+function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); document.getElementById('upload-error').innerText = ''; }
 function toggleMainLoader(show, label = "") { const loader = document.getElementById('loader-container'); if(loader) { if(show){ loader.classList.remove('hidden'); document.getElementById('loader-text').innerText = label; } else { loader.classList.add('hidden'); } } }
 function toggleTheme() { const isDark = document.body.classList.toggle('dark-mode'); localStorage.setItem('hubTheme', isDark ? 'dark-mode' : 'light-mode'); updateThemeToggleButton(isDark ? 'dark-mode' : 'light-mode'); }
 function updateThemeToggleButton(theme) { const toggleBtn = document.getElementById('theme-toggle'); if (toggleBtn) toggleBtn.innerHTML = theme === 'dark-mode' ? '<i class="fas fa-sun"></i> Light UI' : '<i class="fas fa-moon"></i> Dark UI'; }

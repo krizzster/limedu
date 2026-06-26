@@ -9,11 +9,13 @@
 </head>
 <body class="light-mode">
 
+    <!-- Sync Screen Loader Canvas -->
     <div id="loader-container" class="hidden">
         <div class="spinner"></div>
         <p class="loading-text" id="loader-text">Syncing with limedu Feed...</p>
     </div>
 
+    <!-- Social Authentication Entry Gate -->
     <div id="login-container" class="login-wrapper fade-in">
         <div class="social-login-card">
             <div class="brand-mascot">🎒</div>
@@ -27,13 +29,15 @@
                 <i class="fas fa-lock"></i>
                 <input type="password" id="password" placeholder="Passcode Key" required>
             </div>
-            <button id="login-btn" onclick=\"handleLogin()\">Enter Workspace <i class="fas fa-arrow-right"></i></button>
+            <button id="login-btn" onclick="handleLogin()">Enter Workspace <i class="fas fa-arrow-right"></i></button>
             <p id="login-error" class="error-msg"></p>
         </div>
     </div>
 
+    <!-- Active Workspace Engine -->
     <div id="app-container" class="app-layout hidden">
         
+        <!-- Left Side Controller Column -->
         <aside class="sidebar-panel">
             <div class="hub-header">
                 <span class="hub-icon">✨</span>
@@ -43,6 +47,7 @@
                 </div>
             </div>
 
+            <!-- Profile Interactive Status Deck -->
             <div class="current-user-card">
                 <div class="profile-avatar" id="current-user-avatar">?</div>
                 <div class="profile-details">
@@ -59,10 +64,12 @@
                 </div>
             </div>
 
+            <!-- Subject Shortcut Nav List -->
             <nav class="hub-navigation">
                 <span class="menu-label">Subject Portals</span>
                 <div class="filter-row" id="subject-filter-rack">
-                    </div>
+                    <!-- Dynamic subject buttons render here -->
+                </div>
             </nav>
 
             <div class="sidebar-action-footer">
@@ -72,6 +79,7 @@
             </div>
         </aside>
 
+        <!-- Main Center Stream Workspace -->
         <main class="main-stream-area">
             <header class="stream-header-bar">
                 <div class="search-wrapper">
@@ -80,10 +88,13 @@
                 </div>
             </header>
 
+            <!-- Social Feed Stream Context Container -->
             <section class="feed-canvas" id="social-feed-stream">
-                </section>
+                <!-- Interactive social post components mount here dynamically -->
+            </section>
         </main>
 
+        <!-- Pinned Interaction Bottom Bar -->
         <div class="interaction-hotbar">
             <button class="hotbar-action-node primary" onclick="openUploadModal(event)">
                 <i class="fas fa-plus"></i> Share Asset
@@ -91,6 +102,7 @@
         </div>
     </div>
 
+    <!-- Resource Publisher Panel Modal Drawer -->
     <div id="upload-modal" class="modal-overlay hidden" onclick="closeUploadModal()">
         <div class="modal-window" onclick="event.stopPropagation()">
             <div class="modal-drag-handle"></div>
@@ -125,7 +137,7 @@
                     <label class="file-dropzone-label">
                         <i class="fas fa-file-pdf"></i>
                         <span id="file-chosen-text">Tap to attach files/images</span>
-                        <input type="file" id="modal-file-input" onchange=\"updateFileLabel()\" accept="application/pdf, image/*" multiple style="display:none;">
+                        <input type="file" id="modal-file-input" onchange="updateFileLabel()" accept="application/pdf, image/*" multiple style="display:none;">
                     </label>
                 </div>
                 <button id="modal-upload-btn" onclick="triggerSupabaseUploadPipeline()">Publish to Feed Stream 🚀</button>
@@ -134,11 +146,12 @@
         </div>
     </div>
 
-    <div id="theatre-lightbox" class="theatre-overlay" onclick=\"closeMediaTheatre()\">
+    <!-- Media Immersion Lightbox Overlay -->
+    <div id="theatre-lightbox" class="theatre-overlay hidden" onclick="closeMediaTheatre()">
         <div class="theatre-window" onclick="event.stopPropagation()">
             <div class="theatre-navbar">
                 <span class="theatre-title" id="theatre-filename-label">Asset Viewer</span>
-                <button class="theatre-close-btn" onclick=\"closeMediaTheatre()\">&times;</button>
+                <button class="theatre-close-btn" onclick="closeMediaTheatre()">&times;</button>
             </div>
             <div class="theatre-stage" id="theatre-view-viewport"></div>
         </div>
