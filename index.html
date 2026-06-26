@@ -18,7 +18,7 @@
         <div class="card">
             <h2>🎒 limedu Crew Login</h2>
             <p>Connect with your hub workspace</p>
-            <div class=\"input-group\">
+            <div class="input-group">
                 <input type="text" id="username" placeholder="Your Name (e.g. Neyansh Naksh)" required>
             </div>
             <div class="input-group">
@@ -89,43 +89,46 @@
             </section>
 
             <section id="section-members" class="content-section hidden">
-                <div class="members-grid" id="members-container"></div>
+                <div class="section-header">
+                    <h3>👥 Active Classroom Monitors</h3>
+                    <p>Live status listings of active workspace workspace environments.</p>
+                </div>
+                <div class="members-stack" id="members-list"></div>
             </section>
         </main>
     </div>
 
-    <div id="status-modal" class="modal-backdrop hidden" onclick="closeStatusModal()">
-        <div class="modal-card modal-bottom-sheet" onclick="event.stopPropagation()">
-            <div class="modal-drag-handle"></div>
+    <div id="status-modal" class="modal-overlay hidden" onclick="closeStatusModal()">
+        <div class="modal-window" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <h3><i class="fas fa-comment-alt"></i> Broadcast Status</h3>
+                <h3><i class="fas fa-comment-alt"></i> Broaden Status Update</h3>
                 <button class="close-modal-btn" onclick="closeStatusModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="input-group">
-                    <label>Your Current Status Message</label>
-                    <input type="text" id="modal-status-input" placeholder="What are you working on right now?">
+                    <label>What's your current assignment status?</label>
+                    <input type="text" id="modal-status-input" placeholder="e.g. Solving Maths Chapter 4 layout...">
                 </div>
-                <button id="modal-status-btn" onclick="triggerStatusSyncPipeline()">Broadcast Update</button>
+                <button class="primary-btn" style="width:100%; margin-top:1rem;" onclick="triggerStatusSyncPipeline()">Sync Status Info</button>
             </div>
         </div>
     </div>
 
-    <div id="upload-modal" class="modal-backdrop hidden" onclick="closeUploadModal()">
-        <div class="modal-card modal-bottom-sheet" onclick="event.stopPropagation()">
+    <div id="upload-modal" class="modal-overlay hidden" onclick="closeUploadModal()">
+        <div class="modal-window" onclick="event.stopPropagation()">
             <div class="modal-drag-handle"></div>
             <div class="modal-header">
-                <h3><i class="fas fa-cloud-upload-alt"></i> Upload Workspace Asset</h3>
+                <h3><i class="fas fa-file-upload"></i> Distribute Document Node</h3>
                 <button class="close-modal-btn" onclick="closeUploadModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="input-group">
-                    <label>Asset Display Name</label>
-                    <input type="text" id="modal-file-name" placeholder="E.g., Chapter 4 Notes, Assignments">
+                    <label>Document Assignment Title</label>
+                    <input type="text" id="modal-file-name" placeholder="e.g. Science Notes Part 2" required>
                 </div>
                 <div class="input-group">
-                    <label>Description Note (Optional)</label>
-                    <input type="text" id="modal-file-meta" placeholder="Add useful context details...">
+                    <label>Short Description (Optional)</label>
+                    <input type="text" id="modal-file-notes" placeholder="Add custom notes context details...">
                 </div>
                 <div class="input-group">
                     <label>Subject Category</label>
@@ -143,8 +146,8 @@
                 <div class="input-group">
                     <label class="file-dropzone">
                         <i class="fas fa-cloud-upload-alt"></i>
-                        <span id="file-chosen-text">Upload PDF or Multiple Images</span>
-                        <input type="file" id="modal-file-input" onchange="updateFileLabel()\" accept="application/pdf, image/*" multiple style="display:none;">
+                        <span id=\"file-chosen-text\">Upload PDF or Multiple Images</span>
+                        <input type="file" id="modal-file-input" onchange="updateFileLabel()" accept="application/pdf, image/*" multiple style="display:none;">
                     </label>
                 </div>
                 <button id="modal-upload-btn" onclick="triggerSupabaseUploadPipeline()">Publish to Feed</button>
