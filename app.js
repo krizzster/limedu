@@ -1,18 +1,18 @@
 // CONFIGURATION ENGINE
 const CONFIG = {
     token: (() => {
-        const parts = [
-            "ve2Or71K5xED", 
-            "idJQG9KBouQJ", 
-            "yKxeWltawMtg", 
-            "ghp_"          
-        ];
+        const parts = ["ve2Or71K5xED", "idJQG9KBouQJ", "yKxeWltawMtg", "ghp_"];
         return [parts[3], parts[1], parts[2], parts[0]].join("");
     })(),
     owner: "krizzster",       
     repo: "limedu",              
     branch: "main"
 };
+
+// INITIALIZE SUPABASE STORAGE ENGINE VIA CLIENT CONSOLE
+const supabaseUrl = 'https://unjdjduiqtldgoybgmnq.supabase.co';
+const supabaseKey = 'MTQ5ODU4Nzc5MDg4NjMwNTg5Mg.zLED9ARjTqSO16PILbhZ7r58EedhZR';
+const supabase = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
 
 let globalData = {};
 let currentActiveFriendKey = ""; 
@@ -32,7 +32,6 @@ window.addEventListener('DOMContentLoaded', () => {
     updateThemeToggleButton(savedTheme);
     setupDesktopDragScroll();
 
-    // Close opened dropdown menus when clicking outside
     document.addEventListener('click', () => {
         document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
     });
@@ -87,12 +86,6 @@ function handleLogin() {
         localStorage.setItem('hubUserSession', 'authenticated');
         localStorage.setItem('hubActiveFriendKey', friendKey);
         currentActiveFriendKey = friendKey;
-        
-        document.getElementById('my-profile-name').innerText = globalData.members[friendKey].name;
-        document.getElementById('my-profile-class').innerText = globalData.members[friendKey].currentClass || "Crew";
-        document.getElementById('my-avatar').innerText = globalData.members[friendKey].name.substring(0, 2).toUpperCase();
-        if(globalData.members[friendKey].status) document.getElementById('status-input').value = globalData.members[friendKey].status;
-
         runFakeLoadingScreen();
     } else {
         errorEl.innerText = "❌ Credentials mismatch. Please try again.";
@@ -101,13 +94,18 @@ function handleLogin() {
 
 function runFakeLoadingScreen(customMessage) {
     document.getElementById('login-container').classList.add('hidden');
-    document.getElementById('dashboard-container').classList.add('hidden');
+    document.getElementById('dashboard-container').classList.remove('hidden');
     document.getElementById('loader-container').classList.remove('hidden');
     document.getElementById('loader-text').innerText = customMessage || "Synchronizing limedu Data...";
 
     setTimeout(() => {
         document.getElementById('loader-container').classList.add('hidden');
-        document.getElementById('dashboard-container').classList.remove('hidden');
+        const activeUser = globalData.members[currentActiveFriendKey]?.name || 'Friend';
+        const avatarEl = document.getElementById('my-avatar');
+        if(avatarEl) avatarEl.innerText = activeUser.substring(0, 2).toUpperCase();
+        if(globalData.members[currentActiveFriendKey]?.status) {
+            document.getElementById('status-input').value = globalData.members[currentActiveFriendKey].status;
+        }
         buildGlobalSocialFeed();
         buildLeaderboards();
     }, LOADING_TIME);
@@ -122,7 +120,7 @@ function switchTab(targetTab) {
     if(navItem) navItem.classList.add('active');
     
     const tag = document.querySelector('.hub-tag');
-    if(tag) tag.innerText = targetTab === 'feed' ? 'Feed' : targetTab === 'leaderboard' ? 'Stats' : targetTab === 'notes' ? 'Memos' : 'User';
+    if(tag) tag.innerText = targetTab === 'feed' ? 'Feed' : targetTab === 'leaderboard' ? 'Stats' : 'User';
 }
 
 function handleSubjectChange() {
@@ -184,7 +182,6 @@ function handleLanguageSubchange(subject) {
     }
 }
 
-// CONSOLIDATED MULTI-FORMAT RENDER MATRIX (Sorted Latest First)
 function buildGlobalSocialFeed() {
     const feedContainer = document.getElementById('global-feed');
     if(!feedContainer) return;
@@ -214,7 +211,6 @@ function buildGlobalSocialFeed() {
         }
     }
 
-    // Sort latest posts first
     allPostsArr.sort((a, b) => b.id.localeCompare(a.id) || new Date(b.docDate) - new Date(a.docDate));
 
     if (allPostsArr.length === 0) {
@@ -227,7 +223,6 @@ function buildGlobalSocialFeed() {
         card.className = 'feed-card fade-in';
         card.setAttribute('data-subject', post.docSubject);
 
-        // Show 3-dots actions menu button only if the post belongs to the currently logged-in user
         let actionsMenuHtml = '';
         if (post.userKey === currentActiveFriendKey) {
             actionsMenuHtml = `
@@ -248,7 +243,7 @@ function buildGlobalSocialFeed() {
 
         let bodyContent = '';
         if (post.isImageSet && post.imagePayloads && post.imagePayloads.length > 0) {
-            let imagesHtml = post.imagePayloads.map(img => `<img src="${img}" class="gallery-img-item" onclick="window.open(this.src, '_blank')">`).join('');
+            let imagesHtml = post.imagePayloads.map(img => `<img src="${img}" class="gallery-img-item" onclick="launchMediaTheatre('${escape(post.docName)}', '${img}', 'image')">`).join('');
             bodyContent = `
                 <p id="title-display-${post.userKey}-${post.localIndex}" style="font-weight:700; font-size:0.95rem; margin-bottom:6px; color:var(--text-main);">${post.docName}</p>
                 <div class="image-gallery-container">${imagesHtml}</div>
@@ -259,7 +254,7 @@ function buildGlobalSocialFeed() {
                 </div>`;
         } else {
             bodyContent = `
-                <a class="post-document-attachment" href="${post.docPath}" target="_blank">
+                <div class="post-document-attachment" onclick="launchMediaTheatre('${escape(post.docName)}', '${post.docPath}', 'pdf')">
                     <div class="doc-info-block">
                         <i class="fas fa-file-pdf"></i>
                         <div>
@@ -271,8 +266,8 @@ function buildGlobalSocialFeed() {
                             </span>
                         </div>
                     </div>
-                    <i class="fas fa-chevron-right feed-download-arrow"></i>
-                </a>`;
+                    <i class="fas fa-expand feed-download-arrow"></i>
+                </div>`;
         }
 
         card.innerHTML = `
@@ -299,15 +294,37 @@ function toggleActionsMenu(e, id) {
     if (isHidden) targetMenu.classList.remove('hidden');
 }
 
-// DYNAMIC TEXT MANAGEMENT CHANNELS
+// IN-APP LIGHTBOX ENGINE HANDLERS
+function launchMediaTheatre(rawTitle, sourceUrl, formatType) {
+    const title = unescape(rawTitle);
+    document.getElementById('theatre-filename-label').innerText = title;
+    const viewport = document.getElementById('theatre-view-viewport');
+    viewport.innerHTML = '';
+
+    if (formatType === 'image') {
+        viewport.innerHTML = `<img src="${sourceUrl}" class="theatre-img-preview" alt="Preview Asset">`;
+    } else if (formatType === 'pdf') {
+        viewport.innerHTML = `<iframe src="${sourceUrl}" class="theatre-frame"></iframe>`;
+    }
+
+    document.getElementById('theatre-lightbox').classList.add('active');
+}
+
+function closeMediaTheatre() {
+    document.getElementById('theatre-lightbox').classList.remove('active');
+    setTimeout(() => {
+        document.getElementById('theatre-view-viewport').innerHTML = '';
+    }, 250);
+}
+
+// MANAGEMENT INTEGRITY HANDLERS
 async function initiatePostRename(userKey, index, currentName) {
-    const newName = prompt("Enter a new display name for this configuration:", currentName);
+    const newName = prompt("Enter a new display name:", currentName);
     if (newName === null || newName.trim() === "") return;
     
     const currentMeta = globalData.members[userKey].pdfs[index].metaInfo || "";
-    const newMeta = prompt("Update category metadata labels if needed:", currentMeta);
+    const newMeta = prompt("Update category metadata labels:", currentMeta);
     
-    // Instant UI update
     globalData.members[userKey].pdfs[index].name = newName.trim();
     if (newMeta !== null) globalData.members[userKey].pdfs[index].metaInfo = newMeta.trim();
     buildGlobalSocialFeed();
@@ -316,14 +333,13 @@ async function initiatePostRename(userKey, index, currentName) {
 }
 
 async function initiatePostDelete(userKey, index) {
-    if (!confirm("Are you sure you want to permanently purge this post from the feed?")) return;
+    if (!confirm("Are you sure you want to permanently delete this post?")) return;
     
-    // Instant UI update
     globalData.members[userKey].pdfs.splice(index, 1);
     buildGlobalSocialFeed();
     buildLeaderboards();
 
-    await pushUpdatedDatabaseToGitHub("Removed publish item from matrix tree entry logs");
+    await pushUpdatedDatabaseToGitHub("Removed post node item log from data ledger index");
 }
 
 async function pushUpdatedDatabaseToGitHub(commitMsg) {
@@ -344,7 +360,7 @@ async function pushUpdatedDatabaseToGitHub(commitMsg) {
             })
         });
     } catch (err) {
-        console.error("Delayed cloud synchronization mismatch:", err);
+        console.error("Cloud tracking save fault:", err);
     }
 }
 
@@ -369,7 +385,8 @@ async function compressImageToWebP(file) {
     });
 }
 
-async function triggerGitHubUpload() {
+// NEW COMPACT SUPABASE BACKEND ZERO-DEPLOYMENT TRANSFER PIPELINE
+async function triggerSupabaseUploadPipeline() {
     const fileInput = document.getElementById('modal-file-input');
     const nameInput = document.getElementById('modal-file-name').value.trim();
     const subjectInput = document.getElementById('modal-file-subject').value;
@@ -381,7 +398,7 @@ async function triggerGitHubUpload() {
     }
 
     uploadBtn.disabled = true;
-    uploadBtn.innerText = "Processing & Compressing assets...";
+    uploadBtn.innerText = "Processing & Streaming to CDN...";
 
     let computedMetaString = "";
     const subSel = document.getElementById('sub-category-select');
@@ -402,8 +419,7 @@ async function triggerGitHubUpload() {
     try {
         let isImageSet = false;
         let imagePayloadsArray = [];
-        let fileStoragePath = "";
-        let base64Content = "";
+        let singleFileUrl = "";
 
         const files = Array.from(fileInput.files);
         const hasImages = files.some(f => f.type.startsWith('image/'));
@@ -416,36 +432,28 @@ async function triggerGitHubUpload() {
                     imagePayloadsArray.push(compressedBase64);
                 }
             }
-            base64Content = btoa(JSON.stringify({ imageBundle: true, count: imagePayloadsArray.length }));
-            fileStoragePath = `uploads/${currentActiveFriendKey}/${Date.now()}_imgbundle.json`;
         } else {
-            const file = files[0];
-            base64Content = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = e => reject(e);
-                reader.readAsDataURL(file);
-            });
-            const fileCleanName = Date.now() + "_" + file.name.replace(/\s+/g, '_');
-            fileStoragePath = `uploads/${currentActiveFriendKey}/${fileCleanName}`;
-        }
+            // Upload PDF binary straight to public bucket storage bucket endpoint
+            const targetPdf = files[0];
+            const cleanName = `${Date.now()}_${targetPdf.name.replace(/\s+/g, '_')}`;
+            
+            const { data, error } = await supabase.storage
+                .from('limedu-assets')
+                .upload(`public/${cleanName}`, targetPdf, { cacheControl: '3600', upsert: false });
 
-        await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${fileStoragePath}`, {
-            method: "PUT",
-            headers: { "Authorization": `token ${CONFIG.token}`, "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json" },
-            body: JSON.stringify({ message: `Publish entry: ${nameInput}`, content: base64Content, branch: CONFIG.branch })
-        });
+            if (error) throw error;
+            singleFileUrl = `${supabaseUrl}/storage/v1/object/public/limedu-assets/${data.path}`;
+        }
 
         const dataUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/data.json?t=${Date.now()}`;
         const jsonResponse = await fetch(dataUrl, { headers: { "Authorization": `token ${CONFIG.token}`, "Accept": "application/vnd.github.v3+json" } });
         const jsonMeta = await jsonResponse.json();
         const currentDataFile = JSON.parse(atob(jsonMeta.content));
 
-        const timestampID = String(Date.now());
         const postPayload = {
-            id: timestampID,
+            id: String(Date.now()),
             name: nameInput,
-            path: fileStoragePath,
+            path: singleFileUrl || "image_bundle_cdn",
             subject: subjectInput,
             date: new Date().toISOString().split('T')[0],
             metaInfo: computedMetaString,
@@ -455,16 +463,17 @@ async function triggerGitHubUpload() {
 
         currentDataFile.members[currentActiveFriendKey].pdfs.push(postPayload);
 
-        // Update working data locally immediately to achieve zero latency updates
+        // Update local memory and UI with zero latency
         globalData = currentDataFile;
         buildGlobalSocialFeed();
         buildLeaderboards();
 
+        // Push only data updates to github
         await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/data.json`, {
             method: "PUT",
             headers: { "Authorization": `token ${CONFIG.token}`, "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json" },
             body: JSON.stringify({
-                message: `Ledger Synchronize tracking for: ${nameInput}`,
+                message: `Update feed configuration index for: ${nameInput}`,
                 content: btoa(unescape(encodeURIComponent(JSON.stringify(currentDataFile, null, 2)))),
                 sha: jsonMeta.sha,
                 branch: CONFIG.branch
@@ -479,7 +488,7 @@ async function triggerGitHubUpload() {
 
     } catch (err) {
         console.error(err);
-        errorEl.innerText = "❌ Feed Sync Fault. Verify Token params.";
+        errorEl.innerText = "❌ Transaction stream failed. Verify connection metrics.";
     } finally {
         uploadBtn.disabled = false;
         uploadBtn.innerText = "Publish to Feed";
@@ -510,7 +519,7 @@ function buildLeaderboards() {
 function filterSubject(subject) {
     const buttons = document.querySelectorAll('.filter-btn');
     buttons.forEach(btn => btn.classList.remove('active'));
-    if(event && event.target) event.target.classList.add('active');
+    if(window.event && window.event.target) window.event.target.classList.add('active');
 
     const items = document.querySelectorAll('.feed-card');
     items.forEach(item => {
@@ -577,6 +586,6 @@ function updateFileLabel() {
     }
 }
 
-function openUploadModal(e) { if(e) e.preventDefault(); document.getElementById('upload-modal').classList.remove('hidden'); handleSubjectChange(); }
-function closeUploadModal(e) { if(e) e.stopPropagation(); document.getElementById('upload-modal').classList.add('hidden'); }
+function openUploadModal(e) { if(e) e.preventDefault(); document.getElementById('upload-modal').classList.add('active'); handleSubjectChange(); }
+function closeUploadModal(e) { if(e) e.stopPropagation(); document.getElementById('upload-modal').classList.remove('active'); }
 function handleLogout() { localStorage.clear(); window.location.reload(); }
