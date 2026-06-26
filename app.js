@@ -38,7 +38,6 @@ window.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
     });
 
-    // Start background streaming synchronization cycle
     initiateMasterSyncPipeline();
 });
 
@@ -50,7 +49,6 @@ async function initiateMasterSyncPipeline() {
     await synchronizeDataPipeline();
     toggleMainLoader(false);
 
-    // Auto-login tracker via localStorage if token session exists
     const sessionToken = localStorage.getItem('limedu_session_user');
     if (sessionToken && globalData.members && globalData.members[sessionToken]) {
         currentActiveFriendKey = sessionToken;
@@ -62,7 +60,6 @@ async function synchronizeDataPipeline() {
     try {
         if (!dbInstance) return;
         
-        // Target column name correctly aligned with 'payload'
         const { data, error } = await dbInstance
             .from('limedu')
             .select('payload')
@@ -139,7 +136,6 @@ async function triggerSupabaseUploadPipeline() {
         }
         globalData.members[currentActiveFriendKey].pdfs.unshift(payloadObj);
 
-        // Update tracking synced to 'payload' column
         const { error: patchErr } = await dbInstance
             .from('limedu')
             .update({ payload: globalData })
@@ -172,7 +168,6 @@ async function triggerDeletePipeline(ownerKey, indexPosition) {
         if (globalData.members && globalData.members[ownerKey] && globalData.members[ownerKey].pdfs) {
             globalData.members[ownerKey].pdfs.splice(indexPosition, 1);
             
-            // Update tracking synced to 'payload' column
             const { error } = await dbInstance
                 .from('limedu')
                 .update({ payload: globalData })
@@ -430,7 +425,6 @@ async function synchronizeStatusUpdate() {
     globalData.members[currentActiveFriendKey].status = newStatus;
 
     try {
-        // Sync payload updates cleanly matching column mapping parameters
         const { error } = await dbInstance
             .from('limedu')
             .update({ payload: globalData })
@@ -464,7 +458,6 @@ function toggleMainLoader(show, label = "") {
     } 
 }
 
-// Ensure theme state functions scale elegantly
 function toggleTheme() { 
     const isDark = document.body.classList.toggle('dark-mode'); 
     localStorage.setItem('hubTheme', isDark ? 'dark-mode' : 'light-mode'); 
