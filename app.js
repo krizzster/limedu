@@ -1,4 +1,6 @@
+// =========================================================================
 // CONFIGURATION ENGINE
+// =========================================================================
 const CONFIG = {
     owner: "krizzster",       
     repo: "limedu",              
@@ -17,17 +19,6 @@ if (typeof window.supabase !== 'undefined') {
 let globalData = {};
 let currentActiveFriendKey = ""; 
 let selectedSubjectFilter = "All";
-let activeEditingPostId = null;
-
-// Github Directory Array List Mapping representing repository structure profilepics folder resources
-const PRESET_PROFILE_PICTURES = [
-    "placeholdername.png",
-    "mohit_avatar.png",
-    "viraj_hero.png",
-    "neyansh_spec.png",
-    "pratyank_alpha.png",
-    "monitor_blue.png"
-];
 
 const MATHS_CHAPTERS = [
     "1. Rational Numbers", "2. Operations on Rational Numbers", "3. Rational Numbers as Decimals",
@@ -37,634 +28,513 @@ const MATHS_CHAPTERS = [
     "13. Symmetry", "14. Visualising Solids"
 ];
 
+// =========================================================================
+// APPLICATION INITIALIZATION ENTRYPOINT
+// =========================================================================
 window.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('hubTheme') || 'light-mode';
     document.body.className = savedTheme;
     updateThemeToggleButton(savedTheme);
     setupDesktopDragScroll();
 
-    // Contextual multi-dropdown outside window click closer safety guard loop
+    // Close dropdowns cleanly if clicked outside
     document.addEventListener('click', () => {
-        document.querySelectorAll('.post-actions-dropdown-menu').forEach(menu => menu.classList.add('hidden'));
+        document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
     });
+
+    synchronizeDataPipeline();
 });
 
-// LOGIN AUTHENTICATION ROUTING GATEWAY
-async function handleLogin() {
-    const usernameInput = document.getElementById('username').value.trim();
-    const passwordInput = document.getElementById('password').value.trim();
-    const errorLabel = document.getElementById('login-error');
+// =========================================================================
+// CORE DATABASE PIPELINE (SYNCHRONIZE & FLATTEN JSONB)
+// =========================================================================
+async function synchronizeDataPipeline() {
+    toggleMainLoader(true, "Syncing with limedu Feed...");
+    try {
+        // Fetching the singular workspace record that hosts the JSONB structure
+        const { data, error } = await dbInstance
+            .from('limedu_hub')
+            .select('data_object')
+            .single();
 
-    if (!usernameInput || !passwordInput) {
-        errorLabel.innerText = "Please complete credentials fields.";
+        if (error) throw error;
+
+        // Cache the raw workspace layout globally
+        globalData = data.data_object || { members: {}, groupName: "The 6B Survivors" };
+
+        // Process and display the unified feed timeline
+        compileAndRenderFeedStream();
+        renderActiveMembersHotbar();
+
+        // Maintain existing session state post-sync if logged in
+        if (currentActiveFriendKey && globalData.members[currentActiveFriendKey]) {
+            renderActiveUserIdentityBadge(globalData.members[currentActiveFriendKey]);
+        }
+    } catch (err) {
+        console.error("Critical syncing block exception:", err);
+    } finally {
+        toggleMainLoader(false);
+    }
+}
+
+// Transform the highly nested JSONB tree into a flat sequence layout sorted by date
+function compileAndRenderFeedStream() {
+    const feedContainer = document.getElementById('feed-container');
+    if (!feedContainer) return;
+
+    if (!globalData || !globalData.members) {
+        feedContainer.innerHTML = `<div class="empty-feed-state">No dynamic workspace metadata active.</div>`;
         return;
     }
 
-    toggleMainLoader(true, "Authenticating user node access...");
+    let flatTimeline = [];
 
-    try {
-        const { data: profile, error } = await dbInstance
-            .from('profiles')
-            .select('*')
-            .eq('full_name', usernameInput)
-            .eq('secure_key', passwordInput)
-            .single();
+    // Extract records by cycling through nested member dictionaries safely
+    Object.keys(globalData.members).forEach(memberKey => {
+        const member = globalData.members[memberKey];
+        if (member && Array.isArray(member.pdfs)) {
+            member.pdfs.forEach((postItem, postIndex) => {
+                flatTimeline.push({
+                    ownerKey: memberKey,
+                    ownerName: member.name,
+                    ownerClass: member.currentClass || "7D",
+                    ownerStatus: member.status || "Limedu Member",
+                    postIndex: postIndex,
+                    // Feed Item Assets
+                    date: postItem.date,
+                    name: postItem.name,
+                    path: postItem.path,
+                    subject: postItem.subject,
+                    metaInfo: postItem.metaInfo || "",
+                    isImageSet: postItem.isImageSet || false,
+                    imagePayloads: postItem.imagePayloads || []
+                });
+            });
+        }
+    });
 
-        if (error || !profile) {
-            errorLabel.innerText = "Invalid full name handle or secure key.";
-            toggleMainLoader(false);
-            return;
+    // Apply categorical filters if active
+    if (selectedSubjectFilter !== "All") {
+        flatTimeline = flatTimeline.filter(p => p.subject === selectedSubjectFilter);
+    }
+
+    // Sort by Date (Newest first)
+    flatTimeline.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Render logic
+    if (flatTimeline.length === 0) {
+        feedContainer.innerHTML = `
+            <div class="empty-feed-state">
+                <i class="fas fa-folder-open"></i>
+                <p>No study updates shared under "${selectedSubjectFilter}" yet.</p>
+            </div>`;
+        return;
+    }
+
+    feedContainer.innerHTML = flatTimeline.map(item => {
+        const isOwner = item.ownerKey === currentActiveFriendKey;
+        
+        // Asset type handling
+        let visualAttachmentHtml = "";
+        if (item.isImageSet && item.imagePayloads.length > 0) {
+            visualAttachmentHtml = `
+                <div class="post-media-gallery" onclick="launchTheatreGallery('${item.name.replace(/'/g, "\\'")}', ${JSON.stringify(item.imagePayloads).replace(/"/g, '&quot;')})">
+                    <img src="${item.imagePayloads[0]}" class="gallery-cover-preview" alt="Preview Grid">
+                    ${item.imagePayloads.length > 1 ? `<div class="gallery-badge-overlay"><i class="fas fa-images"></i> +${item.imagePayloads.length - 1} More</div>` : ''}
+                </div>`;
+        } else if (item.path) {
+            visualAttachmentHtml = `
+                <div class="pdf-attachment-card" onclick="launchTheatreStandalonePDF('${item.path}')">
+                    <div class="pdf-icon-frame"><i class="fas fa-file-pdf"></i></div>
+                    <div class="pdf-meta-details">
+                        <span class="pdf-title-string">${item.name}</span>
+                        <span class="pdf-action-prompt">Click to open document viewer</span>
+                    </div>
+                </div>`;
         }
 
-        globalData.currentSessionUser = profile;
+        return `
+            <div class="feed-post-card fade-in">
+                <div class="post-header-row">
+                    <div class="author-avatar-combo">
+                        <div class="avatar-circle-icon">${item.ownerName.charAt(0)}</div>
+                        <div class="author-identity-column">
+                            <span class="author-name-text">${item.ownerName} <small class="class-tag-bubble">${item.ownerClass}</small></span>
+                            <span class="post-timestamp-text"><i class="fas fa-clock"></i> ${item.date} • <b style="color:var(--social-blue); font-weight:700;">${item.subject}</b></span>
+                        </div>
+                    </div>
+                    
+                    <div class="post-control-node" style="position: relative;">
+                        <button class="post-actions-trigger-btn" onclick="togglePostDropdown(event, '${item.ownerKey}-${item.postIndex}')">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div id="dropdown-${item.ownerKey}-${item.postIndex}" class="post-actions-dropdown-menu hidden">
+                            <button class="post-action-item" onclick="launchTheatreGallery('${item.name.replace(/'/g, "\\'")}', ${JSON.stringify(item.imagePayloads || [item.path]).replace(/"/g, '&quot;')})">
+                                <i class="fas fa-expand-arrows-alt"></i> Immersion Fullscreen
+                            </button>
+                            ${isOwner ? `
+                            <button class="post-action-item delete-action-trigger" onclick="triggerDeletePipeline('${item.ownerKey}', ${item.postIndex})">
+                                <i class="fas fa-trash-alt"></i> Delete Entry
+                            </button>` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                ${item.metaInfo ? `<p class="post-textual-description">${item.metaInfo}</p>` : ''}
+                ${visualAttachmentHtml}
+            </div>`;
+    }).join("");
+}
+
+// =========================================================================
+// AUTHENTICATION PROTOCOLS
+// =========================================================================
+function handleLogin() {
+    const userInp = document.getElementById('username').value.trim();
+    const passInp = document.getElementById('password').value.trim();
+    const errorEl = document.getElementById('login-error');
+
+    if (!userInp || !passInp) {
+        errorEl.innerText = "Please complete credentials fields.";
+        return;
+    }
+
+    if (!globalData || !globalData.members) {
+        errorEl.innerText = "Local cache connection failure. Refresh and retry.";
+        return;
+    }
+
+    let foundKey = "";
+    Object.keys(globalData.members).forEach(key => {
+        if (globalData.members[key].name.toLowerCase() === userInp.toLowerCase()) {
+            foundKey = key;
+        }
+    });
+
+    if (!foundKey) {
+        errorEl.innerText = "Profile mismatch. Check spelling format.";
+        return;
+    }
+
+    const matchedProfile = globalData.members[foundKey];
+    if (matchedProfile.password === passInp) {
+        currentActiveFriendKey = foundKey;
         
-        // Hydrate initial Profile Settings Panel Input controls data fields dynamically
-        document.getElementById('profile-display-name').innerText = profile.full_name;
-        document.getElementById('profile-display-status').innerText = profile.status_quote || "⚡ No status statement configured.";
-        document.getElementById('profile-display-class').innerText = profile.class_section || "7D";
-        document.getElementById('profile-display-avatar').src = profile.avatar_url || "profilepics/placeholdername.png";
-
-        document.getElementById('input-settings-status').value = profile.status_quote || "";
-        document.getElementById('input-settings-class').value = profile.class_section || "7D";
-        document.getElementById('input-settings-username').value = profile.full_name;
-
+        // Transition views cleanly
         document.getElementById('login-container').classList.add('hidden');
         document.getElementById('dashboard-container').classList.remove('hidden');
 
-        await synchronizeLimeduFeedStream();
-        await renderStatsLeaderboardView();
-
-    } catch (err) {
-        console.error("Login verification loop crashed down workflow streams:", err);
-        errorLabel.innerText = "Network Gateway error occurred.";
-    } finally {
-        toggleMainLoader(false);
-    }
-}
-
-// MULTI-VIEW ROUTING TAB CONTROL SWITCHER ENGINE
-function switchActiveViewport(panelKey, navigationItemBtn) {
-    document.querySelectorAll('.view-panel-container').forEach(panel => panel.classList.add('hidden'));
-    document.querySelectorAll('.hotbar-item').forEach(btn => btn.classList.remove('active'));
-
-    document.getElementById(`${panelKey}-panel-view`).classList.remove('hidden');
-    if (navigationItemBtn) navigationItemBtn.classList.add('active');
-
-    if (panelKey === 'feed') synchronizeLimeduFeedStream();
-    if (panelKey === 'stats') renderStatsLeaderboardView();
-}
-
-// TIMELINE RENDERING SYSTEM - FEEDS INJECTION LOOP WITH DYNAMIC DROPDOWNS & DATE METRICS
-async function synchronizeLimeduFeedStream() {
-    const targetStreamContainer = document.getElementById('dynamic-feed-stream-target');
-    if (!targetStreamContainer) return;
-
-    try {
-        let fetchQuery = dbInstance.from('posts').select('*').order('created_at', { ascending: false });
-        if (selectedSubjectFilter !== "All") {
-            fetchQuery = fetchQuery.eq('subject', selectedSubjectFilter);
-        }
-
-        const { data: posts, error } = await fetchQuery;
-        if (error) throw error;
-
-        if (!posts || posts.length === 0) {
-            targetStreamContainer.innerHTML = `
-                <div class="card item-empty-card" style="text-align:center; padding:40px; color:var(--text-secondary);">
-                    <i class="fas fa-folder-open" style="font-size:2.5rem; margin-bottom:12px; opacity:0.4;"></i>
-                    <p>No active workspace records filed under category "${selectedSubjectFilter}".</p>
-                </div>
-            `;
-            return;
-        }
-
-        targetStreamContainer.innerHTML = posts.map(post => {
-            const isOwner = post.author_id === globalData.currentSessionUser.id;
-            const formattedDate = post.created_at ? new Date(post.created_at).toLocaleDateString(undefined, { 
-                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-            }) : 'Just now';
-
-            let mediaActionHtml = '';
-            if (post.payloads && post.payloads.length > 0) {
-                mediaActionHtml = `
-                    <button class="post-download-all-btn" onclick="downloadAllPostAssets(event, '${post.id}', ${JSON.stringify(post.payloads)})">
-                        <i class="fas fa-cloud-download-alt"></i> Download Assets (${post.payloads.length})
-                    </button>
-                `;
-            }
-
-            return `
-                <div class="feed-card-item" id="post-card-${post.id}">
-                    <div class="post-card-header">
-                        <div class="post-author-meta">
-                            <img src="${post.author_avatar || 'profilepics/placeholdername.png'}" class="post-author-pfp" alt="Avatar">
-                            <div>
-                                <h4 class="author-profile-name">${post.author_name}</h4>
-                                <span class="post-timestamp-lbl"><i class="far fa-clock"></i> ${formattedDate}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="post-actions-dropdown-wrapper">
-                            <button class="post-actions-trigger-btn" onclick="togglePostDropdown(event, '${post.id}')">
-                                <i class="fas fa-ellipsis-h"></i>
-                            </button>
-                            <div id="dropdown-${post.id}" class="post-actions-dropdown-menu hidden" onclick="event.stopPropagation()">
-                                <button onclick="triggerPostEditPipeline('${post.id}', '${escapeHtml(post.title)}', '${escapeHtml(post.description)}')">
-                                    <i class="fas fa-pen"></i> Edit Text
-                                </button>
-                                ${isOwner ? `<button class="delete-danger-action" onclick="deletePostPipeline('${post.id}')"><i class="fas fa-trash-alt"></i> Delete</button>` : ''}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="post-card-body" onclick="launchTheatreStandalone('${escapeHtml(post.title)}', ${JSON.stringify(post.payloads || [])})">
-                        <span class="post-subject-tag">${post.subject}</span>
-                        <h3 class="post-title-text">${post.title}</h3>
-                        <p class="post-desc-text">${post.description}</p>
-                    </div>
-                    
-                    <div class="post-card-footer-actions">
-                        ${mediaActionHtml}
-                    </div>
-                </div>
-            `;
-        }).join("");
-
-    } catch (err) {
-        console.error("Critical timeline sync breakdown triggered:", err);
-    }
-}
-
-// DROPDOWN ACCESSIBILITY HANDLERS
-function togglePostDropdown(e, postId) {
-    e.preventDefault();
-    e.stopPropagation();
-    const targetMenu = document.getElementById(`dropdown-${postId}`);
-    const isAlreadyOpen = !targetMenu.classList.contains('hidden');
-    
-    document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
-    if (!isAlreadyOpen) {
-        targetMenu.classList.remove('hidden');
-    }
-}
-
-// POST EDIT & UPDATE PIPELINE
-function triggerPostEditPipeline(postId, title, desc) {
-    activeEditingPostId = postId;
-    document.getElementById('edit-modal-title').value = title;
-    document.getElementById('edit-modal-desc').value = desc;
-    document.getElementById('edit-post-modal').classList.remove('hidden');
-    
-    document.getElementById('modal-save-edit-btn').onclick = async () => {
-        const updatedTitle = document.getElementById('edit-modal-title').value.trim();
-        const updatedDesc = document.getElementById('edit-modal-desc').value.trim();
-        
-        if (!updatedTitle || !updatedDesc) return;
-
-        toggleMainLoader(true, "Updating workspace post element...");
-        try {
-            const { error } = await dbInstance
-                .from('posts')
-                .update({ title: updatedTitle, description: updatedDesc })
-                .eq('id', activeEditingPostId);
-                
-            if (error) throw error;
-            closeEditPostModal();
-            await synchronizeLimeduFeedStream();
-        } catch (err) {
-            console.error("Failed executing text database revision payload updates: ", err);
-        } finally {
-            toggleMainLoader(false);
-        }
-    };
-}
-
-function closeEditPostModal() {
-    document.getElementById('edit-post-modal').classList.add('hidden');
-}
-
-// DELETION SYSTEM OPERATOR BLOCK
-async function deletePostPipeline(postId) {
-    if (!confirm("Are you sure you want to delete this resource post?")) return;
-    toggleMainLoader(true, "Purging resource asset reference...");
-    try {
-        const { error } = await dbInstance.from('posts').delete().eq('id', postId);
-        if (error) throw error;
-        await synchronizeLimeduFeedStream();
-    } catch (err) {
-        console.error("Purge failure loop crashed transmission down network fields:", err);
-    } finally {
-        toggleMainLoader(false);
-    }
-}
-
-// DYNAMIC CATEGORY FILTERS RUNTIMES
-function applySubjectFilter(subjectKey, chipButtonElement) {
-    selectedSubjectFilter = subjectKey;
-    document.querySelectorAll('.filter-chip-btn').forEach(btn => btn.classList.remove('active'));
-    if (chipButtonElement) chipButtonElement.classList.add('active');
-    synchronizeLimeduFeedStream();
-}
-
-// MULTI-ASSET COMPACT BULK DOWNLOAD ENGINE
-async function downloadAllPostAssets(e, postId, payloadUrls) {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
-    if (!payloadUrls || payloadUrls.length === 0) return;
-    
-    for (let i = 0; i < payloadUrls.length; i++) {
-        try {
-            const url = payloadUrls[i];
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.href = downloadUrl;
-            
-            const fileExtension = url.split('.').pop().split('?')[0] || 'png';
-            downloadAnchor.download = `limedu-asset-${postId}-${i + 1}.${fileExtension}`;
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            document.body.removeChild(downloadAnchor);
-            window.URL.revokeObjectURL(downloadUrl);
-        } catch (error) {
-            console.error("Download processing sequence crash:", error);
-        }
-    }
-}
-
-// ON-SITE LIGHTBOX THEATRE IMMERSIVE ASSET VIEWER
-function launchTheatreStandalone(title, assetUrls) {
-    const stage = document.getElementById('theatre-view-viewport');
-    document.getElementById('theatre-filename-label').innerText = title || "Shared Asset View";
-    
-    if (!assetUrls || assetUrls.length === 0) {
-        stage.innerHTML = `<p style="color:#fff; opacity:0.6;">No attached media payloads linked to this resource card.</p>`;
+        // Prime client headers
+        renderActiveUserIdentityBadge(matchedProfile);
+        compileAndRenderFeedStream();
     } else {
-        stage.innerHTML = assetUrls.map(url => {
-            if (url.toLowerCase().includes('.pdf')) {
-                return `<iframe src="${url}" style="width:100%; height:70vh; border:none; border-radius:12px;"></iframe>`;
-            }
-            return `<img src="${url}" style="max-width:100%; max-height:70vh; border-radius:12px; object-fit:contain; margin-bottom:12px;">`;
-        }).join("");
+        errorEl.innerText = "Incorrect workspace passcode security key.";
     }
-    document.getElementById('theatre-lightbox').classList.remove('hidden');
 }
 
-function closeMediaTheatre() {
-    document.getElementById('theatre-lightbox').classList.add('hidden');
-    document.getElementById('theatre-view-viewport').innerHTML = '';
+function renderActiveUserIdentityBadge(profile) {
+    const avatar = document.getElementById('user-avatar-slot');
+    const nameLabel = document.getElementById('user-name-label');
+    const statusInp = document.getElementById('user-status-input');
+
+    if (avatar) avatar.innerText = profile.name.charAt(0);
+    if (nameLabel) nameLabel.innerText = profile.name;
+    if (statusInp) statusInp.value = profile.status || "";
 }
 
-// STATS ROW GENERATION ENGINE (TROPHY DESIGN LOGIC)
-async function renderStatsLeaderboardView() {
-    const listContainer = document.getElementById('leaderboard-list-target');
-    if (!listContainer) return;
+function renderActiveMembersHotbar() {
+    const listWrapper = document.getElementById('friends-status-list');
+    if (!listWrapper || !globalData.members) return;
 
-    try {
-        const { data: users, error } = await dbInstance.from('profiles').select('*').order('shares_count', { ascending: false });
-        if (error) throw error;
-
-        listContainer.innerHTML = users.map((user, idx) => {
-            let trophyIconHtml = '';
-            const totalShares = user.shares_count || 0;
-
-            if (totalShares === 0) {
-                trophyIconHtml = `<i class="fas fa-trophy" style="color:#7f8c8d; opacity:0.4; font-size:1.35rem;" title="No Shared Artifacts Yet"></i>`;
-            } else if (idx === 0) {
-                trophyIconHtml = `<i class="fas fa-trophy" style="color:#ffd700; filter:drop-shadow(0 0 6px rgba(255,215,0,0.5)); font-size:1.5rem;" title="1st Place Contributor"></i>`;
-            } else if (idx === 1) {
-                trophyIconHtml = `<i class="fas fa-trophy" style="color:#e2e8f0; filter:drop-shadow(0 0 6px rgba(226,232,240,0.6)); font-size:1.45rem;" title="2nd Place Contributor"></i>`;
-            } else if (idx === 2) {
-                trophyIconHtml = `<i class="fas fa-trophy" style="color:#cd7f32; font-size:1.35rem;" title="3rd Place Contributor"></i>`;
-            } else {
-                trophyIconHtml = `<span class="rank-numerical-badge">${idx + 1}</span>`;
-            }
-
-            return `
-                <div class="leaderboard-row-item">
-                    <div class="leaderboard-left-rank">
-                        ${trophyIconHtml}
-                        <img src="${user.avatar_url || 'profilepics/placeholdername.png'}" class="leaderboard-pfp">
-                        <span class="leaderboard-user-title">${user.full_name}</span>
-                    </div>
-                    <div class="leaderboard-right-score">
-                        <strong>${totalShares}</strong> shared resources
-                    </div>
+    listWrapper.innerHTML = Object.keys(globalData.members).map(key => {
+        const mem = globalData.members[key];
+        return `
+            <div class="friend-status-card">
+                <div class="friend-avatar">${mem.name.charAt(0)}</div>
+                <div class="friend-info">
+                    <span class="friend-name">${mem.name}</span>
+                    <span class="friend-status-text">${mem.status || "Active on limedu"}</span>
                 </div>
-            `;
-        }).join("");
-    } catch (err) {
-        console.error("Leaderboard loading system sequence crash:", err);
-    }
+            </div>`;
+    }).join("");
 }
 
-// DYNAMIC GUIDED USER PROFILE MODAL SELECTION ENGINE
-function openPfpSelectionConsole() {
-    document.getElementById('pfp-picker-modal').classList.remove('hidden');
-    const galleryView = document.getElementById('pfp-preset-gallery-view');
-    galleryView.innerHTML = '';
+// =========================================================================
+// INTERFACE CONTROLS & EVENT FILTER CORES
+// =========================================================================
+function handleSubjectFilterChange(subjectValue, clickedElement) {
+    selectedSubjectFilter = subjectValue;
     
-    PRESET_PROFILE_PICTURES.forEach(fileName => {
-        const displayLabel = fileName.split('.')[0];
-        const wrapper = document.createElement('div');
-        wrapper.className = 'pfp-gallery-thumb-wrapper';
-        wrapper.style = 'text-align:center; cursor:pointer; transition:transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);';
-        wrapper.onclick = () => savePresetProfilePicture(fileName);
-        
-        wrapper.innerHTML = `
-            <img src="profilepics/${fileName}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid var(--border-soft);">
-            <p style="font-size:0.7rem; color:var(--text-secondary); margin-top:4px; font-weight:700; text-transform:capitalize;">${displayLabel}</p>
-        `;
-        
-        wrapper.onmouseenter = () => wrapper.style.transform = 'scale(1.12)';
-        wrapper.onmouseleave = () => wrapper.style.transform = 'scale(1)';
-        
-        galleryView.appendChild(wrapper);
-    });
+    document.querySelectorAll('.filter-pill').forEach(pill => pill.classList.remove('active'));
+    if (clickedElement) clickedElement.classList.add('active');
+
+    compileAndRenderFeedStream();
 }
 
-function closePfpSelectionConsole() {
-    document.getElementById('pfp-picker-modal').classList.add('hidden');
-}
-
-async function savePresetProfilePicture(fileName) {
-    const targetUrl = `profilepics/${fileName}`;
-    document.getElementById('profile-display-avatar').src = targetUrl;
-    closePfpSelectionConsole();
-    await updateAvatarDatabaseUrlReference(targetUrl);
-}
-
-async function processCustomPfpDirectUpload(inputElement) {
-    if (!inputElement.files || inputElement.files.length === 0) return;
-    const customImgFile = inputElement.files[0];
-    
-    toggleMainLoader(true, "Uploading profile avatar asset payload...");
-    try {
-        const uniqueBucketPath = `avatars/user-${Date.now()}-${customImgFile.name}`;
-        const { error: uploadError } = await dbInstance.storage
-            .from('limedu-assets')
-            .upload(uniqueBucketPath, customImgFile, { cacheControl: '3600', upsert: true });
-            
-        if (uploadError) throw uploadError;
-        
-        const { data: linkData } = dbInstance.storage.from('limedu-assets').getPublicUrl(uniqueBucketPath);
-        const externalPublicUrl = linkData.publicUrl;
-        
-        document.getElementById('profile-display-avatar').src = externalPublicUrl;
-        closePfpSelectionConsole();
-        await updateAvatarDatabaseUrlReference(externalPublicUrl);
-    } catch (err) {
-        console.error("Custom avatar bucket transmission error: ", err);
-    } finally {
-        toggleMainLoader(false);
-    }
-}
-
-async function updateAvatarDatabaseUrlReference(avatarUrlPath) {
-    try {
-        await dbInstance
-            .from('profiles')
-            .update({ avatar_url: avatarUrlPath })
-            .eq('id', globalData.currentSessionUser.id);
-            
-        globalData.currentSessionUser.avatar_url = avatarUrlPath;
-    } catch (err) {
-        console.error("Failed executing database backup update synchronization pipeline reference:", err);
-    }
-}
-
-async function saveProfileSettingsPipeline() {
-    const updatedStatusPhrase = document.getElementById('input-settings-status').value.trim();
-    const updatedClassSection = document.getElementById('input-settings-class').value.trim();
-    const updatedUsernameHandle = document.getElementById('input-settings-username').value.trim();
-    const updatedPasscodeKey = document.getElementById('input-settings-password').value.trim();
-
-    if (!updatedUsernameHandle) {
-        alert("Username handle field parameters must remain populated.");
-        return;
-    }
-
-    toggleMainLoader(true, "Synchronizing custom profile metrics configurations...");
-    try {
-        const profileUpdatePayload = {
-            full_name: updatedUsernameHandle,
-            status_quote: updatedStatusPhrase,
-            class_section: updatedClassSection
-        };
-        if (updatedPasscodeKey) {
-            profileUpdatePayload.secure_key = updatedPasscodeKey;
-        }
-
-        const { error } = await dbInstance
-            .from('profiles')
-            .update(profileUpdatePayload)
-            .eq('id', globalData.currentSessionUser.id);
-
-        if (error) throw error;
-
-        document.getElementById('profile-display-name').innerText = updatedUsernameHandle;
-        document.getElementById('profile-display-status').innerText = updatedStatusPhrase || "⚡ No status configured.";
-        document.getElementById('profile-display-class').innerText = updatedClassSection || "7D";
-
-        // Update active program memory records reference variables states
-        globalData.currentSessionUser.full_name = updatedUsernameHandle;
-        globalData.currentSessionUser.status_quote = updatedStatusPhrase;
-        globalData.currentSessionUser.class_section = updatedClassSection;
-        if (updatedPasscodeKey) globalData.currentSessionUser.secure_key = updatedPasscodeKey;
-
-        alert("Profile workspace synchronized successfully! 🎉");
-    } catch (err) {
-        console.error("Profile credentials transmission failed down network loops:", err);
-        alert("Synchronization pipeline experienced connection parameters fault failures.");
-    } finally {
-        toggleMainLoader(false);
-    }
-}
-
-// MULTI-RESOURCE ATTRIBUTES DROPDOWNS MANAGEMENT
 function handleSubjectChange() {
-    const subjectSelectionBox = document.getElementById('modal-file-subject');
-    const dynamicWrapperElement = document.getElementById('dynamic-subcategories-wrapper');
-    if (!subjectSelectionBox || !dynamicWrapperElement) return;
+    const selectedSub = document.getElementById('modal-file-subject').value;
+    const wrapper = document.getElementById('dynamic-subcategories-wrapper');
+    if (!wrapper) return;
 
-    const value = subjectSelectionBox.value;
-    dynamicWrapperElement.innerHTML = '';
-
-    if (value === 'Maths') {
-        dynamicWrapperElement.innerHTML = `
-            <div class="input-group animated-fade-in-slide">
-                <label>Chapter Focus Module</label>
+    if (selectedSub === "Maths") {
+        wrapper.innerHTML = `
+            <div class="input-group fade-in">
+                <label>Select Mathematics Chapter Index</label>
                 <select id="modal-file-subcategory">
                     ${MATHS_CHAPTERS.map(ch => `<option value="${ch}">${ch}</option>`).join("")}
                 </select>
-            </div>
-        `;
+            </div>`;
+    } else {
+        wrapper.innerHTML = `
+            <div class="input-group fade-in">
+                <label>Topic Title Context / Reference Label</label>
+                <input type="text" id="modal-file-subcategory" placeholder="e.g. Chemical Reactions, Project Log Note">
+            </div>`;
     }
 }
 
-// UPLOAD DATA PIPELINE TO STORAGE BUCKETS & TIMELINE REFERENCE POOLS
-async function triggerSupabaseUploadPipeline() {
-    const fileTitleInput = document.getElementById('modal-file-title').value.trim();
-    const fileDescriptionInput = document.getElementById('modal-file-desc').value.trim();
-    const fileSubjectInput = document.getElementById('modal-file-subject').value;
-    const fileInputDomElement = document.getElementById('modal-file-input');
-    const errorMessageLabel = document.getElementById('upload-error');
-
-    let subCategoryValue = "General Notes Element";
-    const subCategorySelectField = document.getElementById('modal-file-subcategory');
-    if (subCategorySelectField) {
-        subCategoryValue = subCategorySelectField.value;
+function togglePostDropdown(event, compositeKey) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
     }
+    const targetDropdown = document.getElementById(`dropdown-${compositeKey}`);
+    document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => {
+        if (m !== targetDropdown) m.classList.add('hidden');
+    });
+    if (targetDropdown) targetDropdown.classList.toggle('hidden');
+}
 
-    if (!fileTitleInput || !fileDescriptionInput) {
-        errorMessageLabel.innerText = "Please complete title and context summaries text fields.";
+// =========================================================================
+// ASSET MEDIA CONTROLLERS (THEATRE MODE)
+// =========================================================================
+function launchTheatreGallery(title, payloads) {
+    if (typeof payloads === 'string') payloads = [payloads];
+    const view = document.getElementById('theatre-view-viewport');
+    document.getElementById('theatre-filename-label').innerText = title;
+    
+    view.innerHTML = payloads.map(url => `
+        <img src="${url}" style="max-width:100%; max-height:72vh; border-radius:12px; margin-bottom:1rem; object-fit:contain;">
+    `).join("");
+    
+    document.getElementById('theatre-lightbox').classList.remove('hidden');
+}
+
+function launchTheatreStandalonePDF(url) {
+    const view = document.getElementById('theatre-view-viewport');
+    document.getElementById('theatre-filename-label').innerText = "Shared Document Interface";
+    view.innerHTML = `<iframe src="${url}" style="width:100%; height:72vh; border:none; border-radius:12px;"></iframe>`;
+    document.getElementById('theatre-lightbox').classList.remove('hidden');
+}
+
+function closeMediaTheatre() { 
+    document.getElementById('theatre-lightbox').classList.add('hidden'); 
+}
+
+// =========================================================================
+// UPLOAD CRADLE (ATTACHMENT STORAGE PIPELINE)
+// =========================================================================
+async function triggerSupabaseUploadPipeline() {
+    const fileInput = document.getElementById('modal-file-input');
+    const subject = document.getElementById('modal-file-subject').value;
+    const subCatEl = document.getElementById('modal-file-subcategory');
+    const customDesc = document.getElementById('modal-file-desc')?.value.trim() || "";
+    const errorEl = document.getElementById('upload-error');
+
+    if (!currentActiveFriendKey) {
+        alert("Session verification lost. Re-login immediately.");
         return;
     }
 
-    errorMessageLabel.innerText = '';
-    toggleMainLoader(true, "Publishing classroom resource assets payload...");
+    const subcategory = subCatEl ? subCatEl.value : "";
+    if (!subcategory) {
+        errorEl.innerText = "Please specify a structural chapter index or topic header.";
+        return;
+    }
+
+    if (!fileInput || fileInput.files.length === 0) {
+        errorEl.innerText = "Please attach at least one valid study reference file or image asset.";
+        return;
+    }
+
+    errorEl.innerText = "";
+    toggleMainLoader(true, "Uploading assets to Storage...");
 
     try {
-        let arrayPayloadsUrlsCollection = [];
+        const files = Array.from(fileInput.files);
+        const uploadedUrls = [];
+        let isPdfDetected = false;
 
-        if (fileInputDomElement && fileInputDomElement.files.length > 0) {
-            for (let i = 0; i < fileInputDomElement.files.length; i++) {
-                const attachmentFileObject = fileInputDomElement.files[i];
-                const sanitizedUniquePath = `shares/post-${Date.now()}-${attachmentFileObject.name}`;
-                
-                const { error: uploadStorageErr } = await dbInstance.storage
-                    .from('limedu-assets')
-                    .upload(sanitizedUniquePath, attachmentFileObject, { cacheControl: '3600', upsert: true });
-                    
-                if (uploadStorageErr) throw uploadStorageErr;
+        for (const file of files) {
+            if (file.type === "application/pdf") isPdfDetected = true;
 
-                const { data: publicAccessUrlData } = dbInstance.storage
-                    .from('limedu-assets')
-                    .getPublicUrl(sanitizedUniquePath);
-                    
-                arrayPayloadsUrlsCollection.push(publicAccessUrlData.publicUrl);
-            }
+            const sanitizedName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+            const storagePath = `public/${sanitizedName}`;
+
+            const { data: storageData, error: storageErr } = await dbInstance.storage
+                .from('limedu-assets')
+                .upload(storagePath, file);
+
+            if (storageErr) throw storageErr;
+
+            const { data: publicUrlObj } = dbInstance.storage
+                .from('limedu-assets')
+                .getPublicUrl(storagePath);
+
+            uploadedUrls.push(publicUrlObj.publicUrl);
         }
 
-        const databasePostObjectRowPayload = {
-            author_id: globalData.currentSessionUser.id,
-            author_name: globalData.currentSessionUser.full_name,
-            author_avatar: globalData.currentSessionUser.avatar_url || "profilepics/placeholdername.png",
-            title: fileTitleInput,
-            description: fileDescriptionInput,
-            subject: fileSubjectInput,
-            subcategory: subCategoryValue,
-            payloads: arrayPayloadsUrlsCollection
+        // Construct Post Record Scheme
+        const finalTitle = `${subcategory}`;
+        const newPostItem = {
+            date: new Date().toISOString().split('T')[0],
+            name: finalTitle,
+            path: uploadedUrls[0],
+            subject: subject,
+            metaInfo: customDesc,
+            isImageSet: !isPdfDetected,
+            imagePayloads: !isPdfDetected ? uploadedUrls : []
         };
 
-        const { error: dbInsertError } = await dbInstance
-            .from('posts')
-            .insert([databasePostObjectRowPayload]);
+        toggleMainLoader(true, "Updating database logs...");
 
-        if (dbInsertError) throw dbInsertError;
+        // Push locally into globalData reference tree structure cleanly
+        if (!globalData.members[currentActiveFriendKey].pdfs) {
+            globalData.members[currentActiveFriendKey].pdfs = [];
+        }
+        globalData.members[currentActiveFriendKey].pdfs.push(newPostItem);
 
-        // Increment local share tracking score values parameters stats fields
-        const dynamicSharesUpdatedScoreCount = (globalData.currentSessionUser.shares_count || 0) + 1;
-        await dbInstance
-            .from('profiles')
-            .update({ shares_count: dynamicSharesUpdatedScoreCount })
-            .eq('id', globalData.currentSessionUser.id);
-            
-        globalData.currentSessionUser.shares_count = dynamicSharesUpdatedScoreCount;
+        // Push updated data object payload safely back up into row field record
+        const { error: dbUpdateErr } = await dbInstance
+            .from('limedu_hub')
+            .update({ data_object: globalData })
+            .match({ id: 1 }); // Replace with your exact primary row target identifier matching pattern
 
-        // Reset inputs and close out upload interfaces safely
-        document.getElementById('modal-file-title').value = '';
-        document.getElementById('modal-file-desc').value = '';
-        fileInputDomElement.value = '';
+        if (dbUpdateErr) throw dbUpdateErr;
+
+        // Reset elements, collapse workspace, and sync views
+        fileInput.value = "";
+        if(document.getElementById('modal-file-desc')) document.getElementById('modal-file-desc').value = "";
         document.getElementById('file-chosen-text').innerText = "Tap to attach files/images";
-
         closeUploadModal();
-        await synchronizeLimeduFeedStream();
-
+        
+        await synchronizeDataPipeline();
+        alert("Study updates published cleanly to your cluster channel! 🚀");
     } catch (err) {
-        console.error("Supplied publish operational process streams crashed down:", err);
-        errorMessageLabel.innerText = "Execution crash occurred during bucket data upload streams sequences.";
+        console.error("Pipeline failure sequence:", err);
+        errorEl.innerText = `Pipeline Error: ${err.message || "Upload step failure"}`;
     } finally {
         toggleMainLoader(false);
     }
 }
 
-// GLOBAL APP FRAME WORKFLOW UTILITIES
-function openUploadModal(e) {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
-    document.getElementById('upload-modal').classList.remove('hidden');
-    handleSubjectChange();
-}
+// =========================================================================
+// DELETION SEQUENCE LOGICS
+// =========================================================================
+async function triggerDeletePipeline(ownerKey, itemIndex) {
+    if (!confirm("Are you sure you want to delete this study entry? This cannot be undone.")) return;
 
-function closeUploadModal() {
-    document.getElementById('upload-modal').classList.add('hidden');
-    if (document.getElementById('upload-error')) {
-        document.getElementById('upload-error').innerText = '';
+    toggleMainLoader(true, "Deleting record entries...");
+    try {
+        if (globalData.members[ownerKey] && Array.isArray(globalData.members[ownerKey].pdfs)) {
+            // Drop target element via array splices
+            globalData.members[ownerKey].pdfs.splice(itemIndex, 1);
+
+            // Re-sync back to single entry row on DB
+            const { error } = await dbInstance
+                .from('limedu_hub')
+                .update({ data_object: globalData })
+                .match({ id: 1 }); // Confirm target identifier mapping constraints
+
+            if (error) throw error;
+
+            await synchronizeDataPipeline();
+        }
+    } catch (err) {
+        console.error("Drop exception tracking:", err);
+        alert("Failed to drop post entry. Check permission rights.");
+    } finally {
+        toggleMainLoader(false);
     }
 }
 
-function toggleMainLoader(show, labelText = "") {
-    const targetLoaderElement = document.getElementById('loader-container');
-    if (!targetLoaderElement) return;
-    if (show) {
-        targetLoaderElement.classList.remove('hidden');
-        document.getElementById('loader-text').innerText = labelText;
-    } else {
-        targetLoaderElement.classList.add('hidden');
+// =========================================================================
+// REALTIME PROFILE BIO STATUS MONITOR OVERRIDES
+// =========================================================================
+async function synchronizeStatusUpdate() {
+    const newStatusValue = document.getElementById('user-status-input').value.trim();
+    if (!currentActiveFriendKey || !globalData.members[currentActiveFriendKey]) return;
+
+    try {
+        // Apply modifications locally
+        globalData.members[currentActiveFriendKey].status = newStatusValue;
+
+        const { error } = await dbInstance
+            .from('limedu_hub')
+            .update({ data_object: globalData })
+            .match({ id: 1 }); // Matches structure key targeting definitions
+
+        if (error) throw error;
+
+        renderActiveMembersHotbar();
+        alert("Status synced successfully! 🎉");
+    } catch (err) {
+        console.error("Status synchronization failed:", err);
     }
 }
 
-function toggleTheme() {
-    const isCurrentlyDark = document.body.classList.toggle('dark-mode');
-    const computedModeKeyString = isCurrentlyDark ? 'dark-mode' : 'light-mode';
-    document.body.className = computedModeKeyString;
-    localStorage.setItem('hubTheme', computedModeKeyString);
-    updateThemeToggleButton(computedModeKeyString);
+// =========================================================================
+// CORE LAYOUT FRAMEWORK ANIMATIONS & RESIZERS
+// =========================================================================
+function openUploadModal(e) { 
+    if(e) e.preventDefault(); 
+    document.getElementById('upload-modal').classList.remove('hidden'); 
+    handleSubjectChange(); 
 }
 
-function updateThemeToggleButton(themeKeyString) {
-    const iconInnerNode = document.querySelector('#theme-toggle i');
-    if (iconInnerNode) {
-        iconInnerNode.className = themeKeyString === 'dark-mode' ? 'fas fa-sun' : 'fas fa-moon';
-    }
+function closeUploadModal() { 
+    document.getElementById('upload-modal').classList.add('hidden'); 
+    if(document.getElementById('upload-error')) document.getElementById('upload-error').innerText = ''; 
 }
 
-function updateFileLabel() {
-    const elementInputElementNode = document.getElementById('modal-file-input');
-    if (elementInputElementNode && elementInputElementNode.files.length > 0) {
-        document.getElementById('file-chosen-text').innerText = `${elementInputElementNode.files.length} element(s) loaded cleanly`;
+function toggleMainLoader(show, label = "") { 
+    const loader = document.getElementById('loader-container'); 
+    if(loader) { 
+        if(show){ 
+            loader.classList.remove('hidden'); 
+            document.getElementById('loader-text').innerText = label; 
+        } else { 
+            loader.classList.add('hidden'); 
+        } 
+    } 
+}
+
+function toggleTheme() { 
+    const isDark = document.body.classList.toggle('dark-mode'); 
+    localStorage.setItem('hubTheme', isDark ? 'dark-mode' : 'light-mode'); 
+    updateThemeToggleButton(isDark ? 'dark-mode' : 'light-mode'); 
+}
+
+function updateThemeToggleButton(theme) { 
+    const toggleBtn = document.querySelector('#theme-toggle i'); 
+    if (toggleBtn) { 
+        toggleBtn.className = theme === 'dark-mode' ? 'fas fa-sun' : 'fas fa-moon'; 
+    } 
+}
+
+function updateFileLabel() { 
+    const inp = document.getElementById('modal-file-input'); 
+    if(inp && inp.files.length > 0) {
+        document.getElementById('file-chosen-text').innerText = `${inp.files.length} element(s) loaded`;
     }
 }
 
 function setupDesktopDragScroll() {
-    const targetSliderTrackElement = document.querySelector('.filter-row-slider');
-    if (!targetSliderTrackElement) return;
-    let trackMousedownStateIsDown = false;
-    let startHorizontalCoordinateX;
-    let initialScrollPositionLeftOffset;
-
-    targetSliderTrackElement.addEventListener('mousedown', (e) => {
-        trackMousedownStateIsDown = true;
-        startHorizontalCoordinateX = e.pageX - targetSliderTrackElement.offsetLeft;
-        initialScrollPositionLeftOffset = targetSliderTrackElement.scrollLeft;
-    });
-    targetSliderTrackElement.addEventListener('mouseleave', () => { trackMousedownStateIsDown = false; });
-    targetSliderTrackElement.addEventListener('mouseup', () => { trackMousedownStateIsDown = false; });
-    targetSliderTrackElement.addEventListener('mousemove', (e) => {
-        if (!trackMousedownStateIsDown) return;
-        e.preventDefault();
-        const currentPositionX = e.pageX - targetSliderTrackElement.offsetLeft;
-        const speedDeltaScrollWalkMultiplier = (currentPositionX - startHorizontalCoordinateX) * 2;
-        targetSliderTrackElement.scrollLeft = initialScrollPositionLeftOffset - speedDeltaScrollWalkMultiplier;
-    });
-}
-
-function escapeHtml(textString) {
-    if (!textString) return '';
-    return textString
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    const slider = document.querySelector('.filter-row');
+    if (!slider) return;
+    let isDown = false; let startX; let scrollLeft;
+    slider.addEventListener('mousedown', (e) => { isDown = true; startX = e.pageX - slider.offsetLeft; scrollLeft = slider.scrollLeft; });
+    slider.addEventListener('mouseleave', () => { isDown = false; });
+    slider.addEventListener('mouseup', () => { isDown = false; });
+    slider.addEventListener('mousemove', (e) => { if(!isDown) return; e.preventDefault(); const x = e.pageX - slider.offsetLeft; const walk = (x - startX) * 2; slider.scrollLeft = scrollLeft - walk; });
 }
