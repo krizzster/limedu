@@ -16,16 +16,7 @@ if (typeof window.supabase !== 'undefined') {
     dbInstance = window.supabase.createClient(supabaseUrl, supabaseKey);
 }
 
-// Global states reconstructed to match structural database rows
-let globalFeedData = [];
-let localMembersRegistry = {
-    "mohit": { name: "Galla Mohit Sai", password: "123", status: "Coding..." },
-    "viraj": { name: "Viraj", password: "123", status: "Active on limedu" },
-    "neyansh": { name: "Neyansh", password: "123", status: "Studying" },
-    "pratyank": { name: "Pratyank", password: "123", status: "Online" },
-    "kriz": { name: "Kriz", password: "123", status: "Class Monitor 👑" }
-};
-
+let globalData = {};
 let currentActiveFriendKey = ""; 
 let selectedSubjectFilter = "All";
 
@@ -47,6 +38,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
     });
 
+    // Start background streaming synchronization cycle
     initiateMasterSyncPipeline();
 });
 
@@ -58,8 +50,9 @@ async function initiateMasterSyncPipeline() {
     await synchronizeDataPipeline();
     toggleMainLoader(false);
 
+    // Auto-login tracker via localStorage if token session exists
     const sessionToken = localStorage.getItem('limedu_session_user');
-    if (sessionToken && localMembersRegistry[sessionToken]) {
+    if (sessionToken && globalData.members && globalData.members[sessionToken]) {
         currentActiveFriendKey = sessionToken;
         enterWorkspaceDashboardView();
     }
@@ -69,28 +62,17 @@ async function synchronizeDataPipeline() {
     try {
         if (!dbInstance) return;
         
-        // Fetch rows directly from your structural columns
+        // Target column name correctly aligned with 'payload'
         const { data, error } = await dbInstance
             .from('limedu')
-            .select('id, created_at, name, subject, metaInfo, path, subCategory, status')
-            .order('created_at', { ascending: false });
+            .select('payload')
+            .single();
 
         if (error) throw error;
 
-        if (data) {
-            globalFeedData = data;
-            
-            // Sync up status records dynamically from database entries if available
-            data.forEach(row => {
-                if (row.name && row.status) {
-                    for (let key in localMembersRegistry) {
-                        if (localMembersRegistry[key].name === row.name) {
-                            localMembersRegistry[key].status = row.status;
-                        }
-                    }
-                }
-            });
-            console.log("Successfully fetched remote rows:", globalFeedData);
+        if (data && data.payload) {
+            globalData = data.payload;
+            console.log("Successfully fetched remote master stream matrix:", globalData);
         }
     } catch (err) {
         console.error("Critical syncing block exception:", err);
@@ -111,47 +93,59 @@ async function triggerSupabaseUploadPipeline() {
 
     if (!fileInp || fileInp.files.length === 0) {
         const errorLabel = document.getElementById('upload-error');
-        if (errorLabel) errorLabel.innerText = "Error: Please choose an asset file/image to bundle.";
+        if (errorLabel) errorLabel.innerText = "Error: Please choose at least one asset file/image to bundle.";
         return;
     }
 
     toggleMainLoader(true, "Uploading payloads securely to asset array...");
 
     try {
-        const file = fileInp.files[0];
-        const identityStamp = Date.now() + "-" + Math.random().toString(36).substring(2, 7);
-        const path = `public/${identityStamp}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+        let uploadedUrls = [];
+        for (let i = 0; i < fileInp.files.length; i++) {
+            const file = fileInp.files[i];
+            const identityStamp = Date.now() + "-" + Math.random().toString(36).substring(2, 7);
+            const path = `public/${identityStamp}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
 
-        const { data: uploadData, error: uploadErr } = await dbInstance.storage
-            .from('limedu-assets')
-            .upload(path, file, { cacheControl: '3600', upsert: false });
+            const { data, error } = await dbInstance.storage
+                .from('limedu-assets')
+                .upload(path, file, { cacheControl: '3600', upsert: false });
 
-        if (uploadErr) throw uploadErr;
+            if (error) throw error;
 
-        const { data: publicData } = dbInstance.storage
-            .from('limedu-assets')
-            .getPublicUrl(path);
+            const { data: publicData } = dbInstance.storage
+                .from('limedu-assets')
+                .getPublicUrl(path);
 
-        const publicUrl = publicData?.publicUrl || "";
-        
-        // Safety Fallback Check Added Here to Prevent Undefined Crashes
-        const userProfile = localMembersRegistry[currentActiveFriendKey] || { name: "Anonymous", status: "Active" };
+            if (publicData?.publicUrl) {
+                uploadedUrls.push(publicData.publicUrl);
+            }
+        }
 
-        // Insert a new structural row match to your columns
-        const { error: insertErr } = await dbInstance
+        if (uploadedUrls.length === 0) throw new Error("File extraction failed.");
+
+        const payloadObj = {
+            date: new Date().toISOString().split('T')[0],
+            name: fileInp.files[0].name.split('.')[0],
+            path: uploadedUrls[0],
+            subject: subject,
+            metaInfo: meta || "Study materials uploaded by team lead.",
+            isImageSet: true,
+            imagePayloads: uploadedUrls,
+            subCategory: categoryInfo
+        };
+
+        if (!globalData.members[currentActiveFriendKey].pdfs) {
+            globalData.members[currentActiveFriendKey].pdfs = [];
+        }
+        globalData.members[currentActiveFriendKey].pdfs.unshift(payloadObj);
+
+        // Update tracking synced to 'payload' column
+        const { error: patchErr } = await dbInstance
             .from('limedu')
-            .insert([
-                {
-                    name: userProfile.name,
-                    subject: subject,
-                    metaInfo: meta || "Study materials uploaded by crew lead.",
-                    path: publicUrl,
-                    subCategory: categoryInfo,
-                    status: userProfile.status || ""
-                }
-            ]);
+            .update({ payload: globalData })
+            .match({ id: 1 });
 
-        if (insertErr) throw insertErr;
+        if (patchErr) throw patchErr;
 
         closeUploadModal();
         document.getElementById('modal-file-desc').value = "";
@@ -170,20 +164,25 @@ async function triggerSupabaseUploadPipeline() {
     }
 }
 
-async function triggerDeletePipeline(rowId) {
+async function triggerDeletePipeline(ownerKey, indexPosition) {
     if (!confirm("Are you absolute sure you want to scrub this entry off the shared cloud?")) return;
     toggleMainLoader(true, "Purging card matrix block...");
 
     try {
-        const { error } = await dbInstance
-            .from('limedu')
-            .delete()
-            .match({ id: rowId });
+        if (globalData.members && globalData.members[ownerKey] && globalData.members[ownerKey].pdfs) {
+            globalData.members[ownerKey].pdfs.splice(indexPosition, 1);
+            
+            // Update tracking synced to 'payload' column
+            const { error } = await dbInstance
+                .from('limedu')
+                .update({ payload: globalData })
+                .match({ id: 1 });
 
-        if (error) throw error;
+            if (error) throw error;
 
-        await synchronizeDataPipeline();
-        compileAndRenderFeedStream();
+            await synchronizeDataPipeline();
+            compileAndRenderFeedStream();
+        }
     } catch (err) {
         console.error("Purge failure protocol activated:", err);
     } finally {
@@ -199,17 +198,22 @@ function handleLogin() {
     const passInp = document.getElementById('password').value.trim();
     const errLabel = document.getElementById('login-error');
 
+    if (!globalData.members) {
+        if (errLabel) errLabel.innerText = "Syncing system data. Try again in 2 seconds.";
+        return;
+    }
+
     let resolvedKey = null;
     const lowerInputName = nameInp.toLowerCase();
 
-    for (const key in localMembersRegistry) {
-        if (localMembersRegistry[key].name.toLowerCase() === lowerInputName) {
+    for (const key in globalData.members) {
+        if (globalData.members[key].name && globalData.members[key].name.toLowerCase() === lowerInputName) {
             resolvedKey = key;
             break;
         }
     }
 
-    if (resolvedKey && localMembersRegistry[resolvedKey].password === passInp) {
+    if (resolvedKey && globalData.members[resolvedKey].password === passInp) {
         currentActiveFriendKey = resolvedKey;
         localStorage.setItem('limedu_session_user', resolvedKey);
         if (errLabel) errLabel.innerText = "";
@@ -230,7 +234,7 @@ function enterWorkspaceDashboardView() {
     document.getElementById('login-container').classList.add('hidden');
     document.getElementById('dashboard-container').classList.remove('hidden');
 
-    const currentUserProfile = localMembersRegistry[currentActiveFriendKey] || { name: "Guest User", status: "Active" };
+    const currentUserProfile = globalData.members[currentActiveFriendKey];
     renderActiveUserIdentityBadge(currentUserProfile);
     renderActiveMembersHotbar();
     compileAndRenderFeedStream();
@@ -251,10 +255,12 @@ function renderActiveUserIdentityBadge(profile) {
 
 function renderActiveMembersHotbar() {
     const listWrapper = document.getElementById('friends-status-list');
-    if (!listWrapper) return;
+    if (!listWrapper || !globalData.members) return;
 
-    listWrapper.innerHTML = Object.keys(localMembersRegistry).map(key => {
-        const mem = localMembersRegistry[key];
+    listWrapper.innerHTML = Object.keys(globalData.members).map(key => {
+        const mem = globalData.members[key];
+        if (!mem.name) return '';
+        
         const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(mem.name)}&background=e7f3ff&color=1877f2&bold=true`;
         
         return `
@@ -275,9 +281,24 @@ function renderActiveMembersHotbar() {
 // =========================================================================
 function compileAndRenderFeedStream() {
     const streamWrapper = document.getElementById('feed-stream-interactive-container');
-    if (!streamWrapper) return;
+    if (!streamWrapper || !globalData.members) return;
 
-    let aggregateCards = [...globalFeedData];
+    let aggregateCards = [];
+    Object.keys(globalData.members).forEach(ownerKey => {
+        const memberObj = globalData.members[ownerKey];
+        if (memberObj.pdfs && Array.isArray(memberObj.pdfs)) {
+            memberObj.pdfs.forEach((item, index) => {
+                aggregateCards.push({
+                    ...item,
+                    ownerKey: ownerKey,
+                    ownerName: memberObj.name,
+                    indexPosition: index
+                });
+            });
+        }
+    });
+
+    aggregateCards.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     if (selectedSubjectFilter !== "All") {
         aggregateCards = aggregateCards.filter(card => card.subject === selectedSubjectFilter);
@@ -293,12 +314,11 @@ function compileAndRenderFeedStream() {
     }
 
     streamWrapper.innerHTML = aggregateCards.map(item => {
+        const payloadImages = item.imagePayloads || [item.path];
         const hasSubcategory = item.subCategory ? `<span class="badge subtopic-badge">${item.subCategory}</span>` : "";
-        const currentUserProfile = localMembersRegistry[currentActiveFriendKey];
-        const isOwner = (currentUserProfile && item.name === currentUserProfile.name);
+        const isOwner = (item.ownerKey === currentActiveFriendKey);
         
-        const postAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || "User")}&background=1877f2&color=fff&bold=true`;
-        const postDate = item.created_at ? new Date(item.created_at).toISOString().split('T')[0] : "Recent";
+        const postAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.ownerName)}&background=1877f2&color=fff&bold=true`;
 
         return `
             <div class="feed-card-item">
@@ -307,20 +327,19 @@ function compileAndRenderFeedStream() {
                         <img src="${postAvatarUrl}" alt="author" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">
                     </div>
                     <div class="author-details-wrapper">
-                        <h4>${item.name || "Anonymous"}</h4>
-                        <span class="timestamp-label">${postDate} &bull; <span class="badge subject-badge">${item.subject || "General"}</span> ${hasSubcategory}</span>
+                        <h4>${item.ownerName}</h4>
+                        <span class="timestamp-label">${item.date} &bull; <span class="badge subject-badge">${item.subject}</span> ${hasSubcategory}</span>
                     </div>
                     <div class="action-dropdown-anchor" style="position: relative;">
-                        <button class="post-actions-trigger-btn" onclick="toggleActionDropdownConsole(event, '${item.id}')">
+                        <button class="post-actions-trigger-btn" onclick="toggleActionDropdownConsole(event, '${item.ownerKey}_${item.indexPosition}')">
                             <i class="fas fa-ellipsis-h"></i>
                         </button>
-                        <div id="dropdown-${item.id}" class="post-actions-dropdown-menu hidden">
-                            ${item.path ? `
+                        <div id="dropdown-${item.ownerKey}_${item.indexPosition}" class="post-actions-dropdown-menu hidden">
                             <button class="post-action-item" onclick="openMediaTheatre('${item.path}')">
-                                <i class="fas fa-expand-arrows-alt"></i> View Asset
-                            </button>` : ''}
+                                <i class="fas fa-expand-arrows-alt"></i> View Full Size
+                            </button>
                             ${isOwner ? `
-                            <button class="post-action-item scrub-btn" onclick="triggerDeletePipeline(${item.id})">
+                            <button class="post-action-item scrub-btn" onclick="triggerDeletePipeline('${item.ownerKey}', ${item.indexPosition})">
                                 <i class="fas fa-trash-alt"></i> Delete Entry
                             </button>` : ''}
                         </div>
@@ -328,11 +347,20 @@ function compileAndRenderFeedStream() {
                 </div>
                 
                 <div class="feed-card-body">
-                    <p class="post-description-text">${item.metaInfo || ""}</p>
-                    ${item.path ? `
-                    <div class="mosaic-grid-layout grid-count-1" onclick="openMediaTheatre('${item.path}')">
-                        <div class="mosaic-img-wrapper"><img src="${item.path}" alt="preview"></div>
-                    </div>` : ''}
+                    <p class="post-description-text">${item.metaInfo}</p>
+                    <div class="mosaic-grid-layout grid-count-${Math.min(payloadImages.length, 4)}" onclick="openMediaTheatre('${item.path}')">
+                        ${payloadImages.map((imgUrl, i) => {
+                            if (i >= 4) return '';
+                            if (i === 3 && payloadImages.length > 4) {
+                                return `
+                                <div class="mosaic-img-wrapper overflow-wrapper">
+                                    <img src="${imgUrl}" alt="preview">
+                                    <div class="overlay-count-backdrop"><span>+${payloadImages.length - 3}</span></div>
+                                </div>`;
+                            }
+                            return `<div class="mosaic-img-wrapper"><img src="${imgUrl}" alt="preview"></div>`;
+                        }).join("")}
+                    </div>
                 </div>
             </div>`;
     }).join("");
@@ -345,9 +373,6 @@ function handleSubjectFilterSelection(targetElement, subjectValue) {
     compileAndRenderFeedStream();
 }
 
-// =========================================================================
-// LIGHTBOX & MISC ROUTINES
-// =========================================================================
 function handleSubjectChange() {
     const sub = document.getElementById('modal-file-subject').value;
     const wrapper = document.getElementById('dynamic-subcategories-wrapper');
@@ -380,20 +405,18 @@ function toggleActionDropdownConsole(event, idKey) {
     if (!alreadyOpen) menu.classList.remove('hidden');
 }
 
+// =========================================================================
+// LIGHTBOX & STATUS INTEGRATION HANDLERS
+// =========================================================================
 function openMediaTheatre(url) {
     const view = document.getElementById('theatre-view-viewport');
     document.getElementById('theatre-filename-label').innerText = "Shared Document Viewer";
-    
-    if (url.toLowerCase().endsWith('.pdf')) {
-        view.innerHTML = `<iframe src="${url}" style="width:100%; height:75vh; border:none; border-radius:12px;"></iframe>`;
-    } else {
-        view.innerHTML = `<img src="${url}" style="max-width:100%; max-height:75vh; border-radius:12px; object-fit:contain;">`;
-    }
+    view.innerHTML = `<iframe src="${url}" style="width:100%; height:75vh; border:none; border-radius:12px;"></iframe>`;
     document.getElementById('theatre-lightbox').classList.remove('hidden');
 }
 
 function openDirectFriendMessageConsole(friendKey) {
-    const currentMember = localMembersRegistry[friendKey];
+    const currentMember = globalData.members[friendKey];
     if (!currentMember) return;
     alert(`Connected to ${currentMember.name}'s workspace.\nStatus: "${currentMember.status || 'Active on limedu'}"`);
 }
@@ -403,28 +426,28 @@ async function synchronizeStatusUpdate() {
     if (!inp) return;
     const newStatus = inp.value.trim();
 
-    if (!currentActiveFriendKey || !localMembersRegistry[currentActiveFriendKey]) return;
-
-    localMembersRegistry[currentActiveFriendKey].status = newStatus;
-    renderActiveMembersHotbar();
+    toggleMainLoader(true, "Updating custom dynamic status...");
+    globalData.members[currentActiveFriendKey].status = newStatus;
 
     try {
-        // Updates the status dynamically across entries matching the member's profile identity
+        // Sync payload updates cleanly matching column mapping parameters
         const { error } = await dbInstance
             .from('limedu')
-            .update({ status: newStatus })
-            .match({ name: localMembersRegistry[currentActiveFriendKey].name });
+            .update({ payload: globalData })
+            .match({ id: 1 });
 
         if (error) throw error;
-        alert("Status updated and synced with cloud! 🎉");
-        await synchronizeDataPipeline();
-        compileAndRenderFeedStream();
+        alert("Status synced successfully! 🎉");
     } catch (err) {
-        console.error("Status synchronization mismatch:", err);
-        alert("Saved locally, but failed to sync online.");
+        console.error("Status synchronization failed:", err);
+    } finally {
+        toggleMainLoader(false);
     }
 }
 
+// =========================================================================
+// CORE LAYOUT MISC FUNCTIONALITIES
+// =========================================================================
 function closeMediaTheatre() { document.getElementById('theatre-lightbox').classList.add('hidden'); }
 function openUploadModal(e) { if(e) { e.preventDefault(); e.stopPropagation(); } document.getElementById('upload-modal').classList.remove('hidden'); handleSubjectChange(); }
 function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); if(document.getElementById('upload-error')) document.getElementById('upload-error').innerText = ''; }
@@ -441,6 +464,7 @@ function toggleMainLoader(show, label = "") {
     } 
 }
 
+// Ensure theme state functions scale elegantly
 function toggleTheme() { 
     const isDark = document.body.classList.toggle('dark-mode'); 
     localStorage.setItem('hubTheme', isDark ? 'dark-mode' : 'light-mode'); 
