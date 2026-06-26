@@ -288,3 +288,87 @@ body {
     background: var(--border-soft);
     border-radius: 10px;
 }
+
+/* ==========================================================================
+   AVATAR BREAKOUT & HOTBAR LAYOUT FIXES
+   ========================================================================== */
+
+/* Restrain user profile wrapper */
+.user-identity-card, .friend-status-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 12px;
+}
+
+/* Force hotbar items to stay compact and horizontal if inside hotbar row */
+#friends-status-list {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 8px 4px;
+    width: 100%;
+}
+
+/* Rigid sizing bounds for active member list avatars */
+.friend-avatar {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    max-width: 48px !important;
+    max-height: 48px !important;
+    display: block;
+    position: relative;
+    border-radius: 50%;
+    overflow: hidden !important;
+}
+
+/* Structure for the author avatar inside individual feed post cards */
+.avatar-circle-icon {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    max-width: 40px !important;
+    max-height: 40px !important;
+    display: block;
+    position: relative;
+    border-radius: 50%;
+    overflow: hidden !important;
+}
+
+/* Ensure images strictly follow parent circular bounds */
+.friend-avatar img, 
+.avatar-circle-icon img,
+#user-avatar-slot img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+}
+
+/* Clean fallback structure for friend layout card texts */
+.friend-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+}
+
+.friend-name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.friend-status-text {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
