@@ -1,13 +1,6 @@
 // =========================================================================
 // CONFIGURATION ENGINE
 // =========================================================================
-const CONFIG = {
-    owner: "krizzster",       
-    repo: "limedu",              
-    branch: "main"
-};
-
-// INITIALIZE SUPABASE STORAGE & DATABASE ENGINE SECURELY
 const supabaseUrl = 'https://unjdjduiqtldgoybgmnq.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuamRqZHVpcXRsZGdveWJnbW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MzgzODEsImV4cCI6MjA5MzAxNDM4MX0.qMuQcBysiKuFD5ByoL17fs0KxClgI-FEyzyKYayNVdE';
 
@@ -18,28 +11,32 @@ if (typeof window.supabase !== 'undefined') {
 
 let globalData = {};
 let currentActiveFriendKey = ""; 
-let selectedSubjectFilter = "All";
-
-const MATHS_CHAPTERS = [
-    "1. Rational Numbers", "2. Operations on Rational Numbers", "3. Rational Numbers as Decimals",
-    "4. Exponents and Powers", "5. Application of Percentage", "6. Algebraic Expressions",
-    "7. Linear Equations in One Variable", "8. Triangle and Its Properties", "9. Congruent Triangles",
-    "10. Construction of Triangles", "11. Perimeter and Area", "12. Data Handling",
-    "13. Symmetry", "14. Visualising Solids"
-];
+let selectedSubjectFilter = "All Subjects";
 
 window.addEventListener('DOMContentLoaded', () => {
-    const savedTheme = localStorage.getItem('hubTheme') || 'light-mode';
-    document.body.className = savedTheme;
-    updateThemeToggleButton(savedTheme);
-    setupDesktopDragScroll();
-
     document.addEventListener('click', () => {
         document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
     });
-
     initiateMasterSyncPipeline();
 });
+
+// =========================================================================
+// TAB NAVIGATION SYSTEM
+// =========================================================================
+function switchTab(tabId, badgeText, btnElement) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+    // Show active tab
+    document.getElementById(tabId).classList.remove('hidden');
+    // Update header badge
+    document.getElementById('page-badge').innerText = badgeText;
+    
+    // Update active state on nav bar
+    if(btnElement) {
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        btnElement.classList.add('active');
+    }
+}
 
 // =========================================================================
 // CORE DATAPACK PIPELINE & INTEGRATION
@@ -59,43 +56,25 @@ async function initiateMasterSyncPipeline() {
 async function synchronizeDataPipeline() {
     try {
         if (!dbInstance) return;
-        
-        const { data, error } = await dbInstance
-            .from('limedu')
-            .select('payload')
-            .single();
-
+        const { data, error } = await dbInstance.from('limedu').select('payload').single();
         if (error) throw error;
-
         if (data && data.payload) {
             globalData = data.payload;
-            console.log("Successfully fetched remote master stream matrix:", globalData);
         }
-    } catch (err) {
-        console.error("Critical syncing block exception:", err);
-    }
+    } catch (err) { console.error("Sync block exception:", err); }
 }
 
 async function triggerSupabaseUploadPipeline() {
     const subject = document.getElementById('modal-file-subject').value;
-    let categoryInfo = "";
-    if (subject === "Maths") {
-        categoryInfo = document.getElementById('modal-maths-chapter-select')?.value || "";
-    } else {
-        categoryInfo = document.getElementById('modal-generic-topic-input')?.value || "";
-    }
-
     const meta = document.getElementById('modal-file-desc').value;
     const fileInp = document.getElementById('modal-file-input');
 
     if (!fileInp || fileInp.files.length === 0) {
-        const errorLabel = document.getElementById('upload-error');
-        if (errorLabel) errorLabel.innerText = "Error: Please choose at least one asset file/image to bundle.";
+        document.getElementById('upload-error').innerText = "Attach files/images first.";
         return;
     }
 
-    toggleMainLoader(true, "Uploading payloads securely to asset array...");
-
+    toggleMainLoader(true, "Uploading payloads securely...");
     try {
         let uploadedUrls = [];
         for (let i = 0; i < fileInp.files.length; i++) {
@@ -103,106 +82,70 @@ async function triggerSupabaseUploadPipeline() {
             const identityStamp = Date.now() + "-" + Math.random().toString(36).substring(2, 7);
             const path = `public/${identityStamp}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
 
-            const { data, error } = await dbInstance.storage
-                .from('limedu-assets')
-                .upload(path, file, { cacheControl: '3600', upsert: false });
-
+            const { error } = await dbInstance.storage.from('limedu-assets').upload(path, file);
             if (error) throw error;
 
-            const { data: publicData } = dbInstance.storage
-                .from('limedu-assets')
-                .getPublicUrl(path);
-
-            if (publicData?.publicUrl) {
-                uploadedUrls.push(publicData.publicUrl);
-            }
+            const { data: publicData } = dbInstance.storage.from('limedu-assets').getPublicUrl(path);
+            if (publicData?.publicUrl) uploadedUrls.push(publicData.publicUrl);
         }
 
-        if (uploadedUrls.length === 0) throw new Error("File extraction failed.");
+        const isImage = uploadedUrls[0].match(/\.(jpeg|jpg|gif|png)$/) != null;
 
         const payloadObj = {
             date: new Date().toISOString().split('T')[0],
-            name: fileInp.files[0].name.split('.')[0],
+            name: meta || fileInp.files[0].name.split('.')[0],
             path: uploadedUrls[0],
             subject: subject,
-            metaInfo: meta || "Study materials uploaded by team lead.",
-            isImageSet: true,
-            imagePayloads: uploadedUrls,
-            subCategory: categoryInfo
+            metaInfo: meta,
+            isImageSet: isImage,
+            imagePayloads: uploadedUrls
         };
 
-        if (!globalData.members[currentActiveFriendKey].pdfs) {
-            globalData.members[currentActiveFriendKey].pdfs = [];
-        }
+        if (!globalData.members[currentActiveFriendKey].pdfs) globalData.members[currentActiveFriendKey].pdfs = [];
         globalData.members[currentActiveFriendKey].pdfs.unshift(payloadObj);
 
-        const { error: patchErr } = await dbInstance
-            .from('limedu')
-            .update({ payload: globalData })
-            .match({ id: 1 });
-
-        if (patchErr) throw patchErr;
+        await dbInstance.from('limedu').update({ payload: globalData }).match({ id: 1 });
 
         closeUploadModal();
         document.getElementById('modal-file-desc').value = "";
         document.getElementById('modal-file-input').value = "";
-        document.getElementById('file-chosen-text').innerText = "Tap to attach files/images";
         
         await synchronizeDataPipeline();
         compileAndRenderFeedStream();
+        compileAndRenderStats();
 
     } catch (err) {
-        console.error(err);
-        const errorLabel = document.getElementById('upload-error');
-        if (errorLabel) errorLabel.innerText = `Upload Fault: ${err.message || err}`;
+        document.getElementById('upload-error').innerText = `Upload Fault: ${err.message}`;
     } finally {
         toggleMainLoader(false);
     }
 }
 
 async function triggerDeletePipeline(ownerKey, indexPosition) {
-    if (!confirm("Are you absolute sure you want to scrub this entry off the shared cloud?")) return;
-    toggleMainLoader(true, "Purging card matrix block...");
-
+    if (!confirm("Are you sure you want to scrub this entry?")) return;
+    toggleMainLoader(true, "Purging entry...");
     try {
-        if (globalData.members && globalData.members[ownerKey] && globalData.members[ownerKey].pdfs) {
-            globalData.members[ownerKey].pdfs.splice(indexPosition, 1);
-            
-            const { error } = await dbInstance
-                .from('limedu')
-                .update({ payload: globalData })
-                .match({ id: 1 });
-
-            if (error) throw error;
-
-            await synchronizeDataPipeline();
-            compileAndRenderFeedStream();
-        }
-    } catch (err) {
-        console.error("Purge failure protocol activated:", err);
-    } finally {
-        toggleMainLoader(false);
-    }
+        globalData.members[ownerKey].pdfs.splice(indexPosition, 1);
+        await dbInstance.from('limedu').update({ payload: globalData }).match({ id: 1 });
+        await synchronizeDataPipeline();
+        compileAndRenderFeedStream();
+        compileAndRenderStats();
+    } catch (err) { console.error(err); } 
+    finally { toggleMainLoader(false); }
 }
 
 // =========================================================================
-// IDENTITY LAYER SYSTEM (UI AVATARS DRIVER)
+// IDENTITY LAYER SYSTEM
 // =========================================================================
 function handleLogin() {
-    const nameInp = document.getElementById('username').value.trim();
+    const nameInp = document.getElementById('username').value.trim().toLowerCase();
     const passInp = document.getElementById('password').value.trim();
-    const errLabel = document.getElementById('login-error');
-
-    if (!globalData.members) {
-        if (errLabel) errLabel.innerText = "Syncing system data. Try again in 2 seconds.";
-        return;
-    }
+    
+    if (!globalData.members) return;
 
     let resolvedKey = null;
-    const lowerInputName = nameInp.toLowerCase();
-
     for (const key in globalData.members) {
-        if (globalData.members[key].name && globalData.members[key].name.toLowerCase() === lowerInputName) {
+        if (globalData.members[key].name.toLowerCase() === nameInp) {
             resolvedKey = key;
             break;
         }
@@ -211,10 +154,9 @@ function handleLogin() {
     if (resolvedKey && globalData.members[resolvedKey].password === passInp) {
         currentActiveFriendKey = resolvedKey;
         localStorage.setItem('limedu_session_user', resolvedKey);
-        if (errLabel) errLabel.innerText = "";
         enterWorkspaceDashboardView();
     } else {
-        if (errLabel) errLabel.innerText = "Invalid credentials. Please verify assignment spelling or passcode access keys.";
+        document.getElementById('login-error').innerText = "Invalid credentials.";
     }
 }
 
@@ -228,137 +170,141 @@ function handleLogout() {
 function enterWorkspaceDashboardView() {
     document.getElementById('login-container').classList.add('hidden');
     document.getElementById('dashboard-container').classList.remove('hidden');
-
-    const currentUserProfile = globalData.members[currentActiveFriendKey];
-    renderActiveUserIdentityBadge(currentUserProfile);
-    renderActiveMembersHotbar();
+    
+    populateProfileTab();
     compileAndRenderFeedStream();
-}
-
-function renderActiveUserIdentityBadge(profile) {
-    const avatar = document.getElementById('user-avatar-slot');
-    const nameLabel = document.getElementById('user-name-label');
-    const statusInp = document.getElementById('user-status-input');
-
-    if (avatar) {
-        const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=1877f2&color=fff&bold=true`;
-        avatar.innerHTML = `<img src="${avatarUrl}" alt="Avatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
-    }
-    if (nameLabel) nameLabel.innerText = profile.name;
-    if (statusInp) statusInp.value = profile.status || "";
-}
-
-function renderActiveMembersHotbar() {
-    const listWrapper = document.getElementById('friends-status-list');
-    if (!listWrapper || !globalData.members) return;
-
-    listWrapper.innerHTML = Object.keys(globalData.members).map(key => {
-        const mem = globalData.members[key];
-        if (!mem.name) return '';
-        
-        const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(mem.name)}&background=e7f3ff&color=1877f2&bold=true`;
-        
-        return `
-            <div class="friend-status-card" onclick="openDirectFriendMessageConsole('${key}')">
-                <div class="friend-avatar">
-                    <img src="${avatarUrl}" alt="${mem.name}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">
-                </div>
-                <div class="friend-info">
-                    <span class="friend-name">${mem.name}</span>
-                    <span class="friend-status-text">${mem.status || "Active on limedu"}</span>
-                </div>
-            </div>`;
-    }).join("");
+    compileAndRenderStats();
 }
 
 // =========================================================================
-// RENDER DRIVER ENGINE
+// RENDER DRIVERS (FEED, STATS, PROFILE)
 // =========================================================================
+function getInitials(name) {
+    let parts = name.split(' ');
+    if (parts.length >= 2) return parts[0][0] + parts[1][0];
+    return parts[0].substring(0, 2).toUpperCase();
+}
+
+function populateProfileTab() {
+    const profile = globalData.members[currentActiveFriendKey];
+    
+    // Setting up the specific big Avatar matching screenshot layout
+    const initials = getInitials(profile.name);
+    document.getElementById('profile-avatar-slot').innerHTML = `<span>${initials}</span>`;
+    
+    document.getElementById('profile-name').innerText = profile.name;
+    document.getElementById('profile-class').innerText = profile.currentClass || "6B";
+    document.getElementById('profile-status-input').value = profile.status || "";
+}
+
 function compileAndRenderFeedStream() {
     const streamWrapper = document.getElementById('feed-stream-interactive-container');
-    if (!streamWrapper || !globalData.members) return;
-
     let aggregateCards = [];
+
     Object.keys(globalData.members).forEach(ownerKey => {
-        const memberObj = globalData.members[ownerKey];
-        if (memberObj.pdfs && Array.isArray(memberObj.pdfs)) {
-            memberObj.pdfs.forEach((item, index) => {
-                aggregateCards.push({
-                    ...item,
-                    ownerKey: ownerKey,
-                    ownerName: memberObj.name,
-                    indexPosition: index
-                });
+        const mem = globalData.members[ownerKey];
+        if (mem.pdfs) {
+            mem.pdfs.forEach((item, index) => {
+                aggregateCards.push({ ...item, ownerKey, ownerName: mem.name, status: mem.status, indexPosition: index });
             });
         }
     });
 
     aggregateCards.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    if (selectedSubjectFilter !== "All") {
-        aggregateCards = aggregateCards.filter(card => card.subject === selectedSubjectFilter);
-    }
-
-    if (aggregateCards.length === 0) {
-        streamWrapper.innerHTML = `
-            <div style="text-align:center; padding:3rem; color:var(--text-secondary); font-weight:600;">
-                <i class="fas fa-folder-open" style="font-size:2.5rem; margin-bottom:12px; display:block; color:var(--social-blue);"></i>
-                No configurations published yet for "${selectedSubjectFilter}"
-            </div>`;
-        return;
+    if (selectedSubjectFilter !== "All Subjects") {
+        aggregateCards = aggregateCards.filter(card => card.subject === selectedSubjectFilter || (card.subject === "OTHER" && selectedSubjectFilter === "Other"));
     }
 
     streamWrapper.innerHTML = aggregateCards.map(item => {
-        const payloadImages = item.imagePayloads || [item.path];
-        const hasSubcategory = item.subCategory ? `<span class="badge subtopic-badge">${item.subCategory}</span>` : "";
         const isOwner = (item.ownerKey === currentActiveFriendKey);
+        const initials = getInitials(item.ownerName);
+        let avatarColor = "#1877f2";
+        if(item.ownerName.includes("Neyansh")) avatarColor = "#00e5ff"; // Color for Neyansh
+        else if(item.ownerName.includes("Viraj")) avatarColor = "#6200ea";
+        else if(item.ownerName.includes("Mohit")) avatarColor = "#00c853";
+
+        // Distinguish exactly how PDFs and Images are rendered based on screenshots
+        let contentHTML = "";
         
-        const postAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.ownerName)}&background=1877f2&color=fff&bold=true`;
+        if (item.isImageSet) {
+            const images = item.imagePayloads || [item.path];
+            let gridClass = "grid-count-" + Math.min(images.length, 4);
+            if(images.length === 3) gridClass = "grid-count-3"; // Layout rule for 3 items
+
+            contentHTML = `
+                <p class="post-description-text">${item.name || item.metaInfo}</p>
+                <div class="mosaic-grid-layout ${gridClass}" onclick="openMediaTheatre('${item.path}')">
+                    ${images.slice(0,4).map((imgUrl, i) => {
+                        if (i === 3 && images.length > 4) {
+                            return `<div class="mosaic-img-wrapper"><img src="${imgUrl}"><div class="overlay-count-backdrop">+${images.length - 3}</div></div>`;
+                        }
+                        return `<div class="mosaic-img-wrapper"><img src="${imgUrl}"></div>`;
+                    }).join("")}
+                </div>`;
+        } else {
+            // PDF Custom Render Block
+            let subTag = item.subject.toUpperCase();
+            contentHTML = `
+                <div class="pdf-attachment-block" onclick="openMediaTheatre('${item.path}')">
+                    <div class="pdf-left-section">
+                        <i class="fas fa-file-pdf pdf-icon"></i>
+                        <div class="pdf-info">
+                            <h4>${item.metaInfo || item.name}</h4>
+                            <span>${item.date} <span class="badge pdf-badge">${subTag}</span> (${item.name})</span>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </div>`;
+        }
 
         return `
             <div class="feed-card-item">
                 <div class="feed-card-header">
-                    <div class="avatar-circle-icon">
-                        <img src="${postAvatarUrl}" alt="author" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">
+                    <div class="header-left">
+                        <div class="avatar-circle-icon" style="background: ${avatarColor}; color: ${avatarColor === '#00e5ff' ? '#000' : '#fff'};">
+                            <span>${initials}</span>
+                        </div>
+                        <div class="author-details-wrapper">
+                            <h4>${item.ownerName}</h4>
+                            <span class="status-text">"${item.status || 'active'}"</span>
+                        </div>
                     </div>
-                    <div class="author-details-wrapper">
-                        <h4>${item.ownerName}</h4>
-                        <span class="timestamp-label">${item.date} &bull; <span class="badge subject-badge">${item.subject}</span> ${hasSubcategory}</span>
-                    </div>
-                    <div class="action-dropdown-anchor" style="position: relative;">
+                    
+                    <div style="position: relative;">
                         <button class="post-actions-trigger-btn" onclick="toggleActionDropdownConsole(event, '${item.ownerKey}_${item.indexPosition}')">
-                            <i class="fas fa-ellipsis-h"></i>
+                            <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <div id="dropdown-${item.ownerKey}_${item.indexPosition}" class="post-actions-dropdown-menu hidden">
-                            <button class="post-action-item" onclick="openMediaTheatre('${item.path}')">
-                                <i class="fas fa-expand-arrows-alt"></i> View Full Size
-                            </button>
-                            ${isOwner ? `
-                            <button class="post-action-item scrub-btn" onclick="triggerDeletePipeline('${item.ownerKey}', ${item.indexPosition})">
-                                <i class="fas fa-trash-alt"></i> Delete Entry
-                            </button>` : ''}
+                            <button class="post-action-item" onclick="openMediaTheatre('${item.path}')"><i class="fas fa-expand"></i> View</button>
+                            ${isOwner ? `<button class="post-action-item scrub-btn" onclick="triggerDeletePipeline('${item.ownerKey}', ${item.indexPosition})"><i class="fas fa-trash-alt"></i> Delete</button>` : ''}
                         </div>
                     </div>
                 </div>
-                
                 <div class="feed-card-body">
-                    <p class="post-description-text">${item.metaInfo}</p>
-                    <div class="mosaic-grid-layout grid-count-${Math.min(payloadImages.length, 4)}" onclick="openMediaTheatre('${item.path}')">
-                        ${payloadImages.map((imgUrl, i) => {
-                            if (i >= 4) return '';
-                            if (i === 3 && payloadImages.length > 4) {
-                                return `
-                                <div class="mosaic-img-wrapper overflow-wrapper">
-                                    <img src="${imgUrl}" alt="preview">
-                                    <div class="overlay-count-backdrop"><span>+${payloadImages.length - 3}</span></div>
-                                </div>`;
-                            }
-                            return `<div class="mosaic-img-wrapper"><img src="${imgUrl}" alt="preview"></div>`;
-                        }).join("")}
-                    </div>
+                    ${contentHTML}
                 </div>
             </div>`;
     }).join("");
+}
+
+function compileAndRenderStats() {
+    const list = document.getElementById('leaderboard-container');
+    let arr = Object.keys(globalData.members).map(k => {
+        return { name: globalData.members[k].name, count: (globalData.members[k].pdfs || []).length };
+    });
+    
+    arr.sort((a, b) => b.count - a.count);
+    
+    list.innerHTML = arr.map((u, i) => `
+        <div class="lb-item">
+            <div class="lb-left">
+                <span class="lb-rank">#${i + 1}</span>
+                <span>${u.name}</span>
+            </div>
+            <span class="lb-shares">${u.count} shares</span>
+        </div>
+    `).join("");
 }
 
 function handleSubjectFilterSelection(targetElement, subjectValue) {
@@ -368,122 +314,43 @@ function handleSubjectFilterSelection(targetElement, subjectValue) {
     compileAndRenderFeedStream();
 }
 
-function handleSubjectChange() {
-    const sub = document.getElementById('modal-file-subject').value;
-    const wrapper = document.getElementById('dynamic-subcategories-wrapper');
-    if (!wrapper) return;
-
-    if (sub === "Maths") {
-        wrapper.innerHTML = `
-            <div class="input-group" style="margin-top:14px;">
-                <label>Select Mathematics Chapter Blueprint</label>
-                <select id="modal-maths-chapter-select">
-                    ${MATHS_CHAPTERS.map(ch => `<option value="${ch}">${ch}</option>`).join("")}
-                </select>
-            </div>`;
-    } else {
-        wrapper.innerHTML = `
-            <div class="input-group" style="margin-top:14px;">
-                <label>Topic / Assignment Context Heading</label>
-                <input type="text" id="modal-generic-topic-input" placeholder="e.g. Chemical Reactions Note sheet" required>
-            </div>`;
-    }
-}
-
 function toggleActionDropdownConsole(event, idKey) {
-    event.preventDefault();
-    event.stopPropagation();
+    event.preventDefault(); event.stopPropagation();
     const menu = document.getElementById(`dropdown-${idKey}`);
     const alreadyOpen = !menu.classList.contains('hidden');
-    
     document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
     if (!alreadyOpen) menu.classList.remove('hidden');
 }
 
 // =========================================================================
-// LIGHTBOX & STATUS INTEGRATION HANDLERS
+// MISC & UTILITIES
 // =========================================================================
+async function synchronizeStatusUpdate() {
+    const newStatus = document.getElementById('profile-status-input').value.trim();
+    toggleMainLoader(true, "Updating custom dynamic status...");
+    globalData.members[currentActiveFriendKey].status = newStatus;
+    try {
+        await dbInstance.from('limedu').update({ payload: globalData }).match({ id: 1 });
+        populateProfileTab();
+        compileAndRenderFeedStream();
+    } catch (err) { console.error(err); }
+    finally { toggleMainLoader(false); }
+}
+
 function openMediaTheatre(url) {
-    const view = document.getElementById('theatre-view-viewport');
-    document.getElementById('theatre-filename-label').innerText = "Shared Document Viewer";
-    view.innerHTML = `<iframe src="${url}" style="width:100%; height:75vh; border:none; border-radius:12px;"></iframe>`;
+    document.getElementById('theatre-view-viewport').innerHTML = `<iframe src="${url}" style="width:100%; height:80vh; border:none; border-radius:12px;"></iframe>`;
     document.getElementById('theatre-lightbox').classList.remove('hidden');
 }
 
-function openDirectFriendMessageConsole(friendKey) {
-    const currentMember = globalData.members[friendKey];
-    if (!currentMember) return;
-    alert(`Connected to ${currentMember.name}'s workspace.\nStatus: "${currentMember.status || 'Active on limedu'}"`);
-}
-
-async function synchronizeStatusUpdate() {
-    const inp = document.getElementById('user-status-input');
-    if (!inp) return;
-    const newStatus = inp.value.trim();
-
-    toggleMainLoader(true, "Updating custom dynamic status...");
-    globalData.members[currentActiveFriendKey].status = newStatus;
-
-    try {
-        const { error } = await dbInstance
-            .from('limedu')
-            .update({ payload: globalData })
-            .match({ id: 1 });
-
-        if (error) throw error;
-        alert("Status synced successfully! 🎉");
-    } catch (err) {
-        console.error("Status synchronization failed:", err);
-    } finally {
-        toggleMainLoader(false);
-    }
-}
-
-// =========================================================================
-// CORE LAYOUT MISC FUNCTIONALITIES
-// =========================================================================
 function closeMediaTheatre() { document.getElementById('theatre-lightbox').classList.add('hidden'); }
-function openUploadModal(e) { if(e) { e.preventDefault(); e.stopPropagation(); } document.getElementById('upload-modal').classList.remove('hidden'); handleSubjectChange(); }
-function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); if(document.getElementById('upload-error')) document.getElementById('upload-error').innerText = ''; }
-
-function toggleMainLoader(show, label = "") { 
-    const loader = document.getElementById('loader-container'); 
-    if(loader) { 
-        if(show){ 
-            loader.classList.remove('hidden'); 
-            document.getElementById('loader-text').innerText = label; 
-        } else { 
-            loader.classList.add('hidden'); 
-        } 
-    } 
-}
-
-function toggleTheme() { 
-    const isDark = document.body.classList.toggle('dark-mode'); 
-    localStorage.setItem('hubTheme', isDark ? 'dark-mode' : 'light-mode'); 
-    updateThemeToggleButton(isDark ? 'dark-mode' : 'light-mode'); 
-}
-
-function updateThemeToggleButton(theme) { 
-    const toggleBtn = document.querySelector('#theme-toggle i'); 
-    if (toggleBtn) { 
-        toggleBtn.className = theme === 'dark-mode' ? 'fas fa-sun' : 'fas fa-moon'; 
-    } 
-}
-
+function openUploadModal() { document.getElementById('upload-modal').classList.remove('hidden'); }
+function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); }
 function updateFileLabel() { 
     const inp = document.getElementById('modal-file-input'); 
-    if(inp && inp.files.length > 0) {
-        document.getElementById('file-chosen-text').innerText = `${inp.files.length} element(s) loaded`;
-    }
+    if(inp.files.length > 0) document.getElementById('file-chosen-text').innerText = `${inp.files.length} element(s) loaded`;
 }
-
-function setupDesktopDragScroll() {
-    const slider = document.querySelector('.filter-row');
-    if (!slider) return;
-    let isDown = false; let startX; let scrollLeft;
-    slider.addEventListener('mousedown', (e) => { isDown = true; startX = e.pageX - slider.offsetLeft; scrollLeft = slider.scrollLeft; });
-    slider.addEventListener('mouseleave', () => { isDown = false; });
-    slider.addEventListener('mouseup', () => { isDown = false; });
-    slider.addEventListener('mousemove', (e) => { if(!isDown) return; e.preventDefault(); const x = e.pageX - slider.offsetLeft; const walk = (x - startX) * 2; slider.scrollLeft = scrollLeft - walk; });
+function toggleMainLoader(show, label = "") { 
+    const loader = document.getElementById('loader-container'); 
+    if(show){ loader.classList.remove('hidden'); document.getElementById('loader-text').innerText = label; } 
+    else { loader.classList.add('hidden'); } 
 }

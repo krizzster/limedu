@@ -3,22 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>limedu | Classroom Hub</title>
+    <title>The 6B Survivors</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="light-mode">
+<body>
 
-    <div id=\"loader-container\" class=\"hidden\">
-        <div class=\"spinner\"></div>
-        <p class=\"loading-text\" id=\"loader-text\">Syncing with limedu Feed...</p>
+    <div id="loader-container" class="hidden">
+        <div class="spinner"></div>
+        <p class="loading-text" id="loader-text">Syncing with limedu Feed...</p>
     </div>
 
-    <div id="login-container" class="login-wrapper fade-in">
+    <div id="login-container" class="login-wrapper">
         <div class="social-login-card">
-            <div class="brand-mascot">🎒</div>
-            <h2>limedu Crew</h2>
-            <p>Jump back into your friend hub</p>
+            <h2>The 6B Survivors</h2>
+            <p>Access the crew network</p>
             <div class="input-field-group">
                 <i class="fas fa-user-tag"></i>
                 <input type="text" id="username" placeholder="Your Full Name" required>
@@ -35,77 +34,98 @@
     <div id="dashboard-container" class="hidden">
         
         <header class="app-top-bar">
-            <div class="top-bar-inner">
-                <div class="branding-block">
-                    <span class="hub-logo-mark">limedu</span>
-                </div>
-                
-                <div class="header-action-nodes">
-                    <button id="theme-toggle" class="utility-icon-btn" onclick="toggleTheme()" title="Switch Aesthetics Matrix">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    <button id="logout-btn" class="utility-icon-btn critical-exit" onclick="handleLogout()" title="Disconnect Grid Session">
-                        <i class="fas fa-power-off"></i>
-                    </button>
-                </div>
+            <div class="header-title">
+                <h1>The 6B Survivors</h1>
+                <span id="page-badge" class="badge header-badge">FEED</span>
             </div>
+            <button class="settings-btn" title="Settings"><i class="fas fa-cog"></i></button>
         </header>
 
-        <main class="main-workspace-scroller">
-            <div class="main-column-feed-wrapper">
-                
-                <div class="user-identity-profile-card">
-                    <div class="identity-layout-row">
-                        <div id="user-avatar-slot" class="user-avatar">
-                            <img src="https://ui-avatars.com/api/?name=User&background=1877f2&color=fff&bold=true" alt="Avatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
-                        </div>
-                        <div class="identity-text-details">
-                            <h3 id="user-name-label">Loading Identity Vector...</h3>
-                            <div class="dynamic-status-input-container">
-                                <input type="text" id="user-status-input" placeholder="Set a status custom flag..." maxlength="70">
-                                <button class="status-sync-btn" onclick="synchronizeStatusUpdate()" title="Save Status Matrix">
-                                    <i class="fas fa-check"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="friends-hotbar-container">
-                    <div class="hotbar-header">
-                        <span class="section-title">THE 6B CREW</span>
-                    </div>
-                    <div class="hotbar-scroll-track" id="friends-status-list">
-                        </div>
-                </div>
-
-                <div class="quick-publish-banner-card" onclick="openUploadModal(event)">
-                    <div class="publish-prompt-row">
-                        <div class="mini-avatar-placeholder">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                        </div>
-                        <div class="fake-input-field">Share configuration payloads or images...</div>
-                    </div>
-                </div>
-
+        <main class="main-content-viewport">
+            
+            <div id="view-feed" class="tab-view">
                 <div class="filter-row-scroller-shell">
                     <div class="filter-row">
-                        <button class="filter-chip-btn active" onclick="handleSubjectFilterSelection(this, 'All')">All Feeds</button>
+                        <button class="filter-chip-btn active" onclick="handleSubjectFilterSelection(this, 'All Subjects')">All Subjects</button>
                         <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Science')">Science</button>
                         <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'English')">English</button>
-                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Social Science')">Social Sci</button>
+                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Social Science')">Social Science</button>
                         <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Hindi')">Hindi</button>
                         <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Maths')">Maths</button>
-                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Sanskrit')">Sanskrit</button>
-                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Other')">Other Docs</button>
+                        <button class="filter-chip-btn" onclick="handleSubjectFilterSelection(this, 'Other')">Other</button>
                     </div>
                 </div>
-
-                <div id="feed-stream-interactive-container" class="feed-stream-timeline">
-                    </div>
-                
+                <div id="feed-stream-interactive-container" class="feed-stream-timeline"></div>
             </div>
+
+            <div id="view-stats" class="tab-view hidden">
+                <div class="stats-header">
+                    <h2>🏆 Hub Analytics</h2>
+                    <p>Who is carrying the crew storage?</p>
+                </div>
+                <div id="leaderboard-container" class="leaderboard-list"></div>
+            </div>
+
+            <div id="view-notes" class="tab-view hidden">
+                <div class="stats-header">
+                    <h2>📝 Shared Workspace Notes</h2>
+                    <p>Quick memos, links, and updates for the group</p>
+                </div>
+                <div class="notice-board-card">
+                    <h3>Notice Board</h3>
+                    <p>Welcome to the upgraded workspace. Use the central publish tool to instantly share multi-image configurations or document assignments directly categorized by chapters and book pages.</p>
+                </div>
+            </div>
+
+            <div id="view-profile" class="tab-view hidden">
+                <div class="profile-card">
+                    <div class="profile-avatar-large" id="profile-avatar-slot"></div>
+                    <h2 id="profile-name">User Name</h2>
+                    <span id="profile-class" class="badge class-badge"></span>
+                    
+                    <div class="status-updater">
+                        <label>YOUR CURRENT STATUS:</label>
+                        <div class="status-input-container">
+                            <input type="text" id="profile-status-input" placeholder="Set status...">
+                            <button class="status-sync-btn" onclick="synchronizeStatusUpdate()">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button class="logout-action-btn" onclick="handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i> Log Out of Hub
+                    </button>
+                </div>
+            </div>
+
         </main>
+
+        <nav class="bottom-nav-bar">
+            <button class="nav-item active" onclick="switchTab('view-feed', 'FEED', this)">
+                <i class="fas fa-home"></i>
+                <span>Feed</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('view-stats', 'STATS', this)">
+                <i class="fas fa-chart-line"></i>
+                <span>Stats</span>
+            </button>
+            
+            <div class="nav-fab-container">
+                <button class="fab-btn" onclick="openUploadModal()">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+
+            <button class="nav-item" onclick="switchTab('view-notes', 'MEMOS', this)">
+                <i class="fas fa-book"></i>
+                <span>Notes</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('view-profile', 'USER', this)">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </button>
+        </nav>
     </div>
 
     <div id="upload-modal" class="modal-overlay hidden" onclick="closeUploadModal()">
@@ -115,7 +135,6 @@
                 <button class="close-modal-btn" onclick="closeUploadModal()">&times;</button>
             </div>
             <div class="modal-body">
-                
                 <div class="input-group">
                     <label>Configuration Subject Array</label>
                     <select id="modal-file-subject" onchange="handleSubjectChange()">
@@ -125,20 +144,17 @@
                         <option value="Hindi">Hindi</option>
                         <option value="Maths">Maths</option>
                         <option value="Sanskrit">Sanskrit</option>
-                        <option value="Other">Other</option>
+                        <option value="OTHER">Other</option>
                     </select>
                 </div>
-
                 <div id="dynamic-subcategories-wrapper"></div>
-
                 <div class="input-group" style="margin-top: 14px;">
                     <label>Context Blueprint Metadata Info</label>
-                    <textarea id="modal-file-desc" placeholder="Optional notes..."></textarea>
+                    <textarea id="modal-file-desc" placeholder="e.g. Holiday homework..."></textarea>
                 </div>
-
                 <div class="input-group" style="margin-top: 14px;">
                     <label class="file-dropzone-label">
-                        <i class="fas fa-file-pdf"></i>
+                        <i class="fas fa-file-upload"></i>
                         <span id="file-chosen-text">Tap to attach files/images</span>
                         <input type="file" id="modal-file-input" onchange="updateFileLabel()" accept="application/pdf, image/*" multiple style="display:none;">
                     </label>
