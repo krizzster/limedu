@@ -16,7 +16,16 @@ if (typeof window.supabase !== 'undefined') {
     dbInstance = window.supabase.createClient(supabaseUrl, supabaseKey);
 }
 
-let globalData = {};
+// Global states reconstructed to match structural database rows
+let globalFeedData = [];
+let localMembersRegistry = {
+    "mohit": { name: "Galla Mohit Sai", password: "123", status: "Coding..." },
+    "viraj": { name: "Viraj", password: "123", status: "Active on limedu" },
+    "neyansh": { name: "Neyansh", password: "123", status: "Studying" },
+    "pratyank": { name: "Pratyank", password: "123", status: "Online" },
+    "kriz": { name: "Kriz", password: "123", status: "Class Monitor 👑" }
+};
+
 let currentActiveFriendKey = ""; 
 let selectedSubjectFilter = "All";
 
@@ -38,7 +47,6 @@ window.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.post-actions-dropdown-menu').forEach(m => m.classList.add('hidden'));
     });
 
-    // Start background streaming synchronization cycle
     initiateMasterSyncPipeline();
 });
 
@@ -50,9 +58,8 @@ async function initiateMasterSyncPipeline() {
     await synchronizeDataPipeline();
     toggleMainLoader(false);
 
-    // Auto-login tracker via localStorage if token session exists
     const sessionToken = localStorage.getItem('limedu_session_user');
-    if (sessionToken && globalData.members && globalData.members[sessionToken]) {
+    if (sessionToken && localMembersRegistry[sessionToken]) {
         currentActiveFriendKey = sessionToken;
         enterWorkspaceDashboardView();
     }
@@ -62,17 +69,28 @@ async function synchronizeDataPipeline() {
     try {
         if (!dbInstance) return;
         
-        // Updated target reference to match renamed table 'limedu'
+        // Fetch rows directly from your structural columns
         const { data, error } = await dbInstance
             .from('limedu')
-            .select('payload')
-            .single();
+            .select('id, created_at, name, subject, metaInfo, path, subCategory, status')
+            .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        if (data && data.data_object) {
-            globalData = data.data_object;
-            console.log("Successfully fetched remote master stream matrix:", globalData);
+        if (data) {
+            globalFeedData = data;
+            
+            // Sync up status records dynamically from database entries if available
+            data.forEach(row => {
+                if (row.name && row.status) {
+                    for (let key in localMembersRegistry) {
+                        if (localMembersRegistry[key].name === row.name) {
+                            localMembersRegistry[key].status = row.status;
+                        }
+                    }
+                }
+            });
+            console.log("Successfully fetched remote rows:", globalFeedData);
         }
     } catch (err) {
         console.error("Critical syncing block exception:", err);
@@ -93,59 +111,47 @@ async function triggerSupabaseUploadPipeline() {
 
     if (!fileInp || fileInp.files.length === 0) {
         const errorLabel = document.getElementById('upload-error');
-        if (errorLabel) errorLabel.innerText = "Error: Please choose at least one asset file/image to bundle.";
+        if (errorLabel) errorLabel.innerText = "Error: Please choose an asset file/image to bundle.";
         return;
     }
 
     toggleMainLoader(true, "Uploading payloads securely to asset array...");
 
     try {
-        let uploadedUrls = [];
-        for (let i = 0; i < fileInp.files.length; i++) {
-            const file = fileInp.files[i];
-            const identityStamp = Date.now() + "-" + Math.random().toString(36).substring(2, 7);
-            const path = `public/${identityStamp}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+        const file = fileInp.files[0];
+        const identityStamp = Date.now() + "-" + Math.random().toString(36).substring(2, 7);
+        const path = `public/${identityStamp}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
 
-            const { data, error } = await dbInstance.storage
-                .from('limedu-assets')
-                .upload(path, file, { cacheControl: '3600', upsert: false });
+        const { data: uploadData, error: uploadErr } = await dbInstance.storage
+            .from('limedu-assets')
+            .upload(path, file, { cacheControl: '3600', upsert: false });
 
-            if (error) throw error;
+        if (uploadErr) throw uploadErr;
 
-            const { data: publicData } = dbInstance.storage
-                .from('limedu-assets')
-                .getPublicUrl(path);
+        const { data: publicData } = dbInstance.storage
+            .from('limedu-assets')
+            .getPublicUrl(path);
 
-            if (publicData?.publicUrl) {
-                uploadedUrls.push(publicData.publicUrl);
-            }
-        }
+        const publicUrl = publicData?.publicUrl || "";
+        
+        // Safety Fallback Check Added Here to Prevent Undefined Crashes
+        const userProfile = localMembersRegistry[currentActiveFriendKey] || { name: "Anonymous", status: "Active" };
 
-        if (uploadedUrls.length === 0) throw new Error("File extraction failed.");
-
-        const payloadObj = {
-            date: new Date().toISOString().split('T')[0],
-            name: fileInp.files[0].name.split('.')[0],
-            path: uploadedUrls[0],
-            subject: subject,
-            metaInfo: meta || "Study materials uploaded by team lead.",
-            isImageSet: true,
-            imagePayloads: uploadedUrls,
-            subCategory: categoryInfo
-        };
-
-        if (!globalData.members[currentActiveFriendKey].pdfs) {
-            globalData.members[currentActiveFriendKey].pdfs = [];
-        }
-        globalData.members[currentActiveFriendKey].pdfs.unshift(payloadObj);
-
-        // Update target to table 'limedu'
-        const { error: patchErr } = await dbInstance
+        // Insert a new structural row match to your columns
+        const { error: insertErr } = await dbInstance
             .from('limedu')
-            .update({ data_object: globalData })
-            .match({ id: 1 });
+            .insert([
+                {
+                    name: userProfile.name,
+                    subject: subject,
+                    metaInfo: meta || "Study materials uploaded by crew lead.",
+                    path: publicUrl,
+                    subCategory: categoryInfo,
+                    status: userProfile.status || ""
+                }
+            ]);
 
-        if (patchErr) throw patchErr;
+        if (insertErr) throw insertErr;
 
         closeUploadModal();
         document.getElementById('modal-file-desc').value = "";
@@ -164,25 +170,20 @@ async function triggerSupabaseUploadPipeline() {
     }
 }
 
-async function triggerDeletePipeline(ownerKey, indexPosition) {
+async function triggerDeletePipeline(rowId) {
     if (!confirm("Are you absolute sure you want to scrub this entry off the shared cloud?")) return;
     toggleMainLoader(true, "Purging card matrix block...");
 
     try {
-        if (globalData.members && globalData.members[ownerKey] && globalData.members[ownerKey].pdfs) {
-            globalData.members[ownerKey].pdfs.splice(indexPosition, 1);
-            
-            // Update target to table 'limedu'
-            const { error } = await dbInstance
-                .from('limedu')
-                .update({ data_object: globalData })
-                .match({ id: 1 });
+        const { error } = await dbInstance
+            .from('limedu')
+            .delete()
+            .match({ id: rowId });
 
-            if (error) throw error;
+        if (error) throw error;
 
-            await synchronizeDataPipeline();
-            compileAndRenderFeedStream();
-        }
+        await synchronizeDataPipeline();
+        compileAndRenderFeedStream();
     } catch (err) {
         console.error("Purge failure protocol activated:", err);
     } finally {
@@ -198,22 +199,17 @@ function handleLogin() {
     const passInp = document.getElementById('password').value.trim();
     const errLabel = document.getElementById('login-error');
 
-    if (!globalData.members) {
-        if (errLabel) errLabel.innerText = "Syncing system data. Try again in 2 seconds.";
-        return;
-    }
-
     let resolvedKey = null;
     const lowerInputName = nameInp.toLowerCase();
 
-    for (const key in globalData.members) {
-        if (globalData.members[key].name && globalData.members[key].name.toLowerCase() === lowerInputName) {
+    for (const key in localMembersRegistry) {
+        if (localMembersRegistry[key].name.toLowerCase() === lowerInputName) {
             resolvedKey = key;
             break;
         }
     }
 
-    if (resolvedKey && globalData.members[resolvedKey].password === passInp) {
+    if (resolvedKey && localMembersRegistry[resolvedKey].password === passInp) {
         currentActiveFriendKey = resolvedKey;
         localStorage.setItem('limedu_session_user', resolvedKey);
         if (errLabel) errLabel.innerText = "";
@@ -234,7 +230,7 @@ function enterWorkspaceDashboardView() {
     document.getElementById('login-container').classList.add('hidden');
     document.getElementById('dashboard-container').classList.remove('hidden');
 
-    const currentUserProfile = globalData.members[currentActiveFriendKey];
+    const currentUserProfile = localMembersRegistry[currentActiveFriendKey] || { name: "Guest User", status: "Active" };
     renderActiveUserIdentityBadge(currentUserProfile);
     renderActiveMembersHotbar();
     compileAndRenderFeedStream();
@@ -246,7 +242,6 @@ function renderActiveUserIdentityBadge(profile) {
     const statusInp = document.getElementById('user-status-input');
 
     if (avatar) {
-        // Dynamic generation using real name to completely eliminate placeholder 404s
         const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=1877f2&color=fff&bold=true`;
         avatar.innerHTML = `<img src="${avatarUrl}" alt="Avatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
     }
@@ -256,12 +251,10 @@ function renderActiveUserIdentityBadge(profile) {
 
 function renderActiveMembersHotbar() {
     const listWrapper = document.getElementById('friends-status-list');
-    if (!listWrapper || !globalData.members) return;
+    if (!listWrapper) return;
 
-    listWrapper.innerHTML = Object.keys(globalData.members).map(key => {
-        const mem = globalData.members[key];
-        if (!mem.name) return '';
-        
+    listWrapper.innerHTML = Object.keys(localMembersRegistry).map(key => {
+        const mem = localMembersRegistry[key];
         const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(mem.name)}&background=e7f3ff&color=1877f2&bold=true`;
         
         return `
@@ -282,24 +275,9 @@ function renderActiveMembersHotbar() {
 // =========================================================================
 function compileAndRenderFeedStream() {
     const streamWrapper = document.getElementById('feed-stream-interactive-container');
-    if (!streamWrapper || !globalData.members) return;
+    if (!streamWrapper) return;
 
-    let aggregateCards = [];
-    Object.keys(globalData.members).forEach(ownerKey => {
-        const memberObj = globalData.members[ownerKey];
-        if (memberObj.pdfs && Array.isArray(memberObj.pdfs)) {
-            memberObj.pdfs.forEach((item, index) => {
-                aggregateCards.push({
-                    ...item,
-                    ownerKey: ownerKey,
-                    ownerName: memberObj.name,
-                    indexPosition: index
-                });
-            });
-        }
-    });
-
-    aggregateCards.sort((a, b) => new Date(b.date) - new Date(a.date));
+    let aggregateCards = [...globalFeedData];
 
     if (selectedSubjectFilter !== "All") {
         aggregateCards = aggregateCards.filter(card => card.subject === selectedSubjectFilter);
@@ -315,11 +293,12 @@ function compileAndRenderFeedStream() {
     }
 
     streamWrapper.innerHTML = aggregateCards.map(item => {
-        const payloadImages = item.imagePayloads || [item.path];
         const hasSubcategory = item.subCategory ? `<span class="badge subtopic-badge">${item.subCategory}</span>` : "";
-        const isOwner = (item.ownerKey === currentActiveFriendKey);
+        const currentUserProfile = localMembersRegistry[currentActiveFriendKey];
+        const isOwner = (currentUserProfile && item.name === currentUserProfile.name);
         
-        const postAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.ownerName)}&background=1877f2&color=fff&bold=true`;
+        const postAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || "User")}&background=1877f2&color=fff&bold=true`;
+        const postDate = item.created_at ? new Date(item.created_at).toISOString().split('T')[0] : "Recent";
 
         return `
             <div class="feed-card-item">
@@ -328,19 +307,20 @@ function compileAndRenderFeedStream() {
                         <img src="${postAvatarUrl}" alt="author" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">
                     </div>
                     <div class="author-details-wrapper">
-                        <h4>${item.ownerName}</h4>
-                        <span class="timestamp-label">${item.date} &bull; <span class="badge subject-badge">${item.subject}</span> ${hasSubcategory}</span>
+                        <h4>${item.name || "Anonymous"}</h4>
+                        <span class="timestamp-label">${postDate} &bull; <span class="badge subject-badge">${item.subject || "General"}</span> ${hasSubcategory}</span>
                     </div>
                     <div class="action-dropdown-anchor" style="position: relative;">
-                        <button class="post-actions-trigger-btn" onclick="toggleActionDropdownConsole(event, '${item.ownerKey}_${item.indexPosition}')">
+                        <button class="post-actions-trigger-btn" onclick="toggleActionDropdownConsole(event, '${item.id}')">
                             <i class="fas fa-ellipsis-h"></i>
                         </button>
-                        <div id="dropdown-${item.ownerKey}_${item.indexPosition}" class="post-actions-dropdown-menu hidden">
+                        <div id="dropdown-${item.id}" class="post-actions-dropdown-menu hidden">
+                            ${item.path ? `
                             <button class="post-action-item" onclick="openMediaTheatre('${item.path}')">
-                                <i class="fas fa-expand-arrows-alt"></i> View Full Size
-                            </button>
+                                <i class="fas fa-expand-arrows-alt"></i> View Asset
+                            </button>` : ''}
                             ${isOwner ? `
-                            <button class="post-action-item scrub-btn" onclick="triggerDeletePipeline('${item.ownerKey}', ${item.indexPosition})">
+                            <button class="post-action-item scrub-btn" onclick="triggerDeletePipeline(${item.id})">
                                 <i class="fas fa-trash-alt"></i> Delete Entry
                             </button>` : ''}
                         </div>
@@ -348,20 +328,11 @@ function compileAndRenderFeedStream() {
                 </div>
                 
                 <div class="feed-card-body">
-                    <p class="post-description-text">${item.metaInfo}</p>
-                    <div class="mosaic-grid-layout grid-count-${Math.min(payloadImages.length, 4)}" onclick="openMediaTheatre('${item.path}')">
-                        ${payloadImages.map((imgUrl, i) => {
-                            if (i >= 4) return '';
-                            if (i === 3 && payloadImages.length > 4) {
-                                return `
-                                <div class="mosaic-img-wrapper overflow-wrapper">
-                                    <img src="${imgUrl}" alt="preview">
-                                    <div class="overlay-count-backdrop"><span>+${payloadImages.length - 3}</span></div>
-                                </div>`;
-                            }
-                            return `<div class="mosaic-img-wrapper"><img src="${imgUrl}" alt="preview"></div>`;
-                        }).join("")}
-                    </div>
+                    <p class="post-description-text">${item.metaInfo || ""}</p>
+                    ${item.path ? `
+                    <div class="mosaic-grid-layout grid-count-1" onclick="openMediaTheatre('${item.path}')">
+                        <div class="mosaic-img-wrapper"><img src="${item.path}" alt="preview"></div>
+                    </div>` : ''}
                 </div>
             </div>`;
     }).join("");
@@ -374,6 +345,9 @@ function handleSubjectFilterSelection(targetElement, subjectValue) {
     compileAndRenderFeedStream();
 }
 
+// =========================================================================
+// LIGHTBOX & MISC ROUTINES
+// =========================================================================
 function handleSubjectChange() {
     const sub = document.getElementById('modal-file-subject').value;
     const wrapper = document.getElementById('dynamic-subcategories-wrapper');
@@ -406,18 +380,20 @@ function toggleActionDropdownConsole(event, idKey) {
     if (!alreadyOpen) menu.classList.remove('hidden');
 }
 
-// =========================================================================
-// LIGHTBOX & STATUS INTEGRATION HANDLERS
-// =========================================================================
 function openMediaTheatre(url) {
     const view = document.getElementById('theatre-view-viewport');
     document.getElementById('theatre-filename-label').innerText = "Shared Document Viewer";
-    view.innerHTML = `<iframe src="${url}" style="width:100%; height:75vh; border:none; border-radius:12px;"></iframe>`;
+    
+    if (url.toLowerCase().endsWith('.pdf')) {
+        view.innerHTML = `<iframe src="${url}" style="width:100%; height:75vh; border:none; border-radius:12px;"></iframe>`;
+    } else {
+        view.innerHTML = `<img src="${url}" style="max-width:100%; max-height:75vh; border-radius:12px; object-fit:contain;">`;
+    }
     document.getElementById('theatre-lightbox').classList.remove('hidden');
 }
 
 function openDirectFriendMessageConsole(friendKey) {
-    const currentMember = globalData.members[friendKey];
+    const currentMember = localMembersRegistry[friendKey];
     if (!currentMember) return;
     alert(`Connected to ${currentMember.name}'s workspace.\nStatus: "${currentMember.status || 'Active on limedu'}"`);
 }
@@ -427,28 +403,28 @@ async function synchronizeStatusUpdate() {
     if (!inp) return;
     const newStatus = inp.value.trim();
 
-    toggleMainLoader(true, "Updating custom dynamic status...");
-    globalData.members[currentActiveFriendKey].status = newStatus;
+    if (!currentActiveFriendKey || !localMembersRegistry[currentActiveFriendKey]) return;
+
+    localMembersRegistry[currentActiveFriendKey].status = newStatus;
+    renderActiveMembersHotbar();
 
     try {
-        // Update target to table 'limedu'
+        // Updates the status dynamically across entries matching the member's profile identity
         const { error } = await dbInstance
             .from('limedu')
-            .update({ data_object: globalData })
-            .match({ id: 1 });
+            .update({ status: newStatus })
+            .match({ name: localMembersRegistry[currentActiveFriendKey].name });
 
         if (error) throw error;
-        alert("Status synced successfully! 🎉");
+        alert("Status updated and synced with cloud! 🎉");
+        await synchronizeDataPipeline();
+        compileAndRenderFeedStream();
     } catch (err) {
-        console.error("Status synchronization failed:", err);
-    } finally {
-        toggleMainLoader(false);
+        console.error("Status synchronization mismatch:", err);
+        alert("Saved locally, but failed to sync online.");
     }
 }
 
-// =========================================================================
-// CORE LAYOUT MISC FUNCTIONALITIES
-// =========================================================================
 function closeMediaTheatre() { document.getElementById('theatre-lightbox').classList.add('hidden'); }
 function openUploadModal(e) { if(e) { e.preventDefault(); e.stopPropagation(); } document.getElementById('upload-modal').classList.remove('hidden'); handleSubjectChange(); }
 function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); if(document.getElementById('upload-error')) document.getElementById('upload-error').innerText = ''; }
